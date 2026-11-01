@@ -6,7 +6,8 @@
   "description": "واژه — نمونهٔ اجرایی محلی",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "validate": "npm run typecheck && npm test",
+    "build": "npm run validate && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts"
