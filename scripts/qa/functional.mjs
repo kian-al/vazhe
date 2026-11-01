@@ -1,0 +1,63 @@
+// QA عملکردی: افزودن به صف، جلوگیری از تکرار، ماندگاری پس از بارگذاری دوباره، برداشتن از صف، افزودن فصل، دور مطالعهٔ آزاد.
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const { chromium } = require(require.resolve("playwright", { paths: [process.cwd(), "/data", "/vercel/sandbox"] }));
+const BASE = process.env.BASE ?? "http://localhost:3100";
+const browser = await chromium.launch({ executablePath: "/usr/local/bin/chromium", args: ["--no-sandbox"] });
+const ctx = await browser.newContext({ viewport: { width: 390, height: 800 }, reducedMotion: "reduce" });
+const page = await ctx.newPage();
+const errors = [];
+page.on("pageerror", (e) => errors.push(e.message));
+const results = [];
+const check = (name, ok, extra = "") => results.push(`${ok ? "PASS" : "FAIL"} ${name}${extra ? " — " + extra : ""}`);
+const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem("vazhe.local.v2") ?? "null"));
+const queued = async () => ((await stored())?.words ?? []).filter((w) => w.status === "queued").map((w) => w.en);
+
+await page.goto(BASE + "/search?q=peep", { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "افزودن «peep» به صف" }).first().click();
+await page.waitForTimeout(300);
+check("add to queue", (await queued()).includes("peep"));
+await page.reload({ waitUntil: "networkidle" });
+check("persists after reload", (await queued()).includes("peep"));
+const before = (await stored()).words.length;
+await page.goto(BASE + "/search?q=zzqxv", { waitUntil: "networkidle" });
+await page.waitForTimeout(600);
+const en = page.locator("#m-en");
+if (await en.count()) {
+  await en.fill("Peep");
+  await page.locator("#m-fa").fill("دزدکی نگاه کردن");
+  await page.locator("form").getByRole("button").last().click();
+  await page.waitForTimeout(300);
+  check("manual duplicate blocked", (await stored()).words.length === before, `words ${before} → ${(await stored()).words.length}`);
+} else check("manual form present", false);
+await page.goto(BASE + "/queue", { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "برداشتن «peep» از صف" }).click();
+await page.waitForTimeout(300);
+const peep = (await stored()).words.find((w) => w.en === "peep");
+check("remove from queue keeps word as saved", peep?.status === "saved", peep?.status);
+const qBefore = (await queued()).length;
+await page.goto(BASE + "/library/alice/alice-2", { waitUntil: "networkidle" });
+await page.getByRole("button", { name: /افزودن فصل به صف/ }).click();
+await page.waitForTimeout(300);
+const qAfter = (await queued()).length;
+check("add chapter adds only fresh words", qAfter > qBefore, `${qBefore} → ${qAfter}`);
+await page.getByRole("button", { name: /افزودن فصل به صف|همهٔ واژه/ }).first().click().catch(() => {});
+await page.waitForTimeout(300);
+check("re-adding chapter adds nothing", (await queued()).length === qAfter);
+const snapshot = JSON.stringify((await stored()).words.map((w) => [w.id, w.status, w.stage]));
+await page.goto(BASE + "/study", { waitUntil: "networkidle" });
+for (let i = 0; i < 10; i++) {
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(120);
+  await page.keyboard.press("3");
+  await page.waitForTimeout(750);
+}
+await page.screenshot({ path: ".qa/v2/func-study-end.png" });
+const summary = await page.getByText(/یک دور دیگر/).count();
+check("free-study round reaches summary", summary > 0);
+const after = JSON.stringify((await stored()).words.map((w) => [w.id, w.status, w.stage]));
+check("free study does not change status/stage", snapshot === after);
+check("no page errors", errors.length === 0, errors.join(" | "));
+console.log(results.join("\n"));
+await page.close(); await ctx.close(); await browser.close();
+process.exit(results.some((r) => r.startsWith("FAIL")) ? 1 : 0);
