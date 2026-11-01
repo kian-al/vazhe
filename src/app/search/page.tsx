@@ -1,162 +1,176 @@
 "use client";
-
 import Link from "next/link";
-import { useMemo, useState, type FormEvent } from "react";
-import { useApp } from "@/components/Providers";
-import { CATALOG, searchWords, type WordDraft } from "@/lib/vocabulary";
+import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useApp, useIsDesktop } from "@/components/store";
+import { En, Icon, Skel, Sprout, inputDir } from "@/components/ui";
+import { PickHint, VList, WordDetail, WordRow } from "@/components/words";
+import { dictionary } from "@/lib/dictionaryProvider";
+import { DICTIONARY, faN, slugify, type DictionaryEntry } from "@/lib/dictionary";
+import { statusKey, type SearchOutcome } from "@/lib/vocabulary";
 
-export default function SearchPage() {
-  const { words, addToQueue, addManualWord, ready } = useApp();
-  const [query, setQuery] = useState("");
-  const [manualOpen, setManualOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [formError, setFormError] = useState("");
-  const [manualEn, setManualEn] = useState("");
-  const [manualFa, setManualFa] = useState("");
+type Phase = "start" | "loading" | "error" | "done";
+const STARTERS = ["curious", "serendipity", "lantern", "persuade", "glimpse"];
 
-  const results = useMemo(() => {
-    if (!query.trim()) return [];
-    const pool = [
-      ...CATALOG.map((item) => ({ ...item, status: "queued" as const, addedAt: "" })),
-      ...words,
-    ];
-    return searchWords(pool, query).filter(
-      (item, index, all) =>
-        all.findIndex((candidate) => candidate.en.toLowerCase() === item.en.toLowerCase()) === index,
-    );
-  }, [query, words]);
-
-  if (!ready) return <p className="loading-state" role="status">جست‌وجو در حال آماده‌شدن است…</p>;
-
-  function addResult(candidate: WordDraft) {
-    const result = addToQueue(candidate);
-    setMessage(result.added ? `«${candidate.en}» به صف اضافه شد.` : `«${candidate.en}» از قبل در مجموعه‌ات هست.`);
-  }
-
-  function handleManualSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const en = manualEn.trim();
-    const fa = manualFa.trim();
-    if (!/^[a-zA-Z][a-zA-Z' -]{0,79}$/.test(en)) {
-      setFormError("واژه را با حروف انگلیسی بنویس؛ حداکثر ۸۰ نویسه.");
-      return;
-    }
-    if (fa.length < 1 || fa.length > 240) {
-      setFormError("معنی فارسی را وارد کن (حداکثر ۲۴۰ نویسه).");
-      return;
-    }
-    const result = addManualWord({ en, fa });
-    setFormError("");
-    setMessage(result.added ? `«${en}» با معنی واردشده به صف اضافه شد.` : `«${en}» از قبل در مجموعه‌ات هست.`);
-    setManualEn("");
-    setManualFa("");
-  }
-
+function ManualAdd({ initial }: { initial: string }) {
+  const app = useApp();
+  const [en, setEn] = useState(/[a-z]/i.test(initial) ? initial : "");
+  const [faText, setFa] = useState("");
+  const [errs, setErrs] = useState<{ en?: string; fa?: string }>({});
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const next: typeof errs = {};
+    if (!/^[a-z][a-z '\-]{0,40}$/i.test(en.trim())) next.en = "یک واژه یا عبارت کوتاه انگلیسی بنویس (فقط حروف لاتین).";
+    if (faText.trim().length < 2) next.fa = "معنی فارسی را بنویس تا کارت قابل‌مرور باشد.";
+    setErrs(next);
+    if (next.en || next.fa) return;
+    const entry: DictionaryEntry = { id: slugify(en), en: en.trim(), fa: faText.trim(), ipa: "", pos: "", exampleEn: "", exampleFa: "" };
+    if (app.add(entry, "manual")) { setEn(""); setFa(""); }
+  };
   return (
-    <>
-      <div className="page-intro">
-        <p className="eyebrow">پیدا کن، بعد نگهش دار</p>
-        <h1>جست‌وجوی واژه</h1>
-        <p className="lead">در واژه‌های نمونه و مجموعهٔ شخصی‌ات بگرد یا یک واژه را با معنی خودت ثبت کن.</p>
+    <form className="card flex flex-col gap-3" onSubmit={submit} noValidate aria-labelledby="manual-h">
+      <h3 id="manual-h" className="h3">افزودن دستی</h3>
+      <p className="small muted">اگر واژه در واژه‌نامهٔ نمونه نیست، خودت اضافه‌اش کن. تکراری‌ها خودکار رد می‌شوند.</p>
+      <div>
+        <label htmlFor="m-en" className="small" style={{ fontWeight: 700 }}>واژهٔ انگلیسی</label>
+        <input id="m-en" dir="ltr" lang="en" className="input no-icon mt-1" value={en} autoComplete="off" spellCheck={false} onChange={(e) => setEn(e.target.value)} aria-invalid={!!errs.en} aria-describedby={errs.en ? "m-en-err" : undefined} />
+        {errs.en && <p id="m-en-err" className="field-error">{errs.en}</p>}
       </div>
-      <section className="card list-card">
-        <label className="field-label" htmlFor="word-search">واژهٔ انگلیسی یا معنی فارسی</label>
-        <input
-          id="word-search"
-          name="word-search"
-          type="search"
-          dir="auto"
-          autoComplete="off"
-          autoCapitalize="none"
-          spellCheck={false}
-          placeholder="مثلاً resilient یا تاب‌آور…"
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setMessage("");
-          }}
-        />
-        <p className="field-hint">جست‌وجوی این نسخه روی داده‌های نمونه و واژه‌های خودت انجام می‌شود؛ به اینترنت وصل نیست.</p>
-      </section>
-      {message && <p className="inline-notice" role="status">{message}</p>}
-      {query.trim() && (
-        <section className="search-results" aria-live="polite" aria-label="نتیجه‌های جست‌وجو">
-          {results.length ? (
-            <>
-              <p className="result-count">{new Intl.NumberFormat("fa-IR").format(results.length)} نتیجه</p>
-              <ul className="word-list card list-card">
-                {results.map((word) => {
-                  const personal = words.find((item) => item.en.toLowerCase() === word.en.toLowerCase());
-                  return (
-                    <li key={word.id}>
-                      <div className="word-row">
-                        <Link className="word-copy word-link" href={`/word/${encodeURIComponent(word.id)}`}>
-                          <b className="english" lang="en" dir="ltr" translate="no">{word.en}</b>
-                          <span className="word-meaning">{word.fa}</span>
-                        </Link>
-                        {personal ? (
-                          <span className={`word-status ${personal.status}`}>
-                            {personal.status === "queued" ? "در صف" : personal.status === "completed" ? "تکمیل‌شده" : "دستهٔ فعال"}
-                          </span>
-                        ) : (
-                          <button className="button small primary" type="button" onClick={() => addResult(word)}>
-                            افزودن به صف
-                          </button>
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          ) : (
-            <div className="card empty-state">
-              <h2>در واژه‌نامهٔ نمونه پیدا نشد</h2>
-              <p>جست‌وجوی آنلاین هنوز وصل نیست. اگر معنی را می‌دانی، می‌توانی واژه را دستی به صف اضافه کنی.</p>
-            </div>
-          )}
-        </section>
-      )}
-      <section className="manual-card">
-        <button
-          className="disclosure-button"
-          type="button"
-          aria-expanded={manualOpen}
-          aria-controls="manual-word-form"
-          onClick={() => setManualOpen((open) => !open)}
-        >
-          <span>{manualOpen ? "بستن افزودن دستی" : "افزودن واژه با معنی خودم"}</span>
-          <span aria-hidden="true">{manualOpen ? "−" : "+"}</span>
-        </button>
-        {manualOpen && (
-          <form id="manual-word-form" className="manual-form" onSubmit={handleManualSubmit} noValidate>
-            <p className="field-hint">این روش از واژه‌نامهٔ بیرونی استفاده نمی‌کند؛ معنی و مثال را خودت وارد می‌کنی.</p>
-            <label className="field-label" htmlFor="manual-en">واژهٔ انگلیسی</label>
-            <input
-              id="manual-en"
-              name="manual-en"
-              autoComplete="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              dir="ltr"
-              maxLength={80}
-              value={manualEn}
-              onChange={(event) => setManualEn(event.target.value)}
-            />
-            <label className="field-label" htmlFor="manual-fa">معنی فارسی</label>
-            <input
-              id="manual-fa"
-              name="manual-fa"
-              autoComplete="off"
-              maxLength={240}
-              value={manualFa}
-              onChange={(event) => setManualFa(event.target.value)}
-            />
-            {formError && <p className="field-error" role="alert">{formError}</p>}
-            <button className="button primary" type="submit">افزودن به صف</button>
-          </form>
-        )}
-      </section>
-    </>
+      <div>
+        <label htmlFor="m-fa" className="small" style={{ fontWeight: 700 }}>معنی فارسی</label>
+        <input id="m-fa" dir="rtl" className="input no-icon mt-1" value={faText} autoComplete="off" onChange={(e) => setFa(e.target.value)} aria-invalid={!!errs.fa} aria-describedby={errs.fa ? "m-fa-err" : undefined} />
+        {errs.fa && <p id="m-fa-err" className="field-error">{errs.fa}</p>}
+      </div>
+      <button type="submit" className="btn btn-primary"><Icon n="plus" /> افزودن به صف</button>
+    </form>
   );
+}
+
+function Search() {
+  const app = useApp();
+  const desk = useIsDesktop();
+  const router = useRouter();
+  const path = usePathname();
+  const sp = useSearchParams();
+  const [q, setQ] = useState(sp.get("q") ?? "");
+  const [phase, setPhase] = useState<Phase>(q.trim() ? "loading" : "start");
+  const [out, setOut] = useState<SearchOutcome>({ results: [] });
+  const [attempt, setAttempt] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const selId = sp.get("w");
+
+  useEffect(() => {
+    const t = q.trim();
+    if (!t) { setPhase("start"); setOut({ results: [] }); return; }
+    setPhase("loading");
+    const ctl = new AbortController();
+    const timer = setTimeout(() => {
+      dictionary.search(t, ctl.signal)
+        .then((r) => { if (!ctl.signal.aborted) { setOut(r); setPhase("done"); } })
+        .catch(() => { if (!ctl.signal.aborted) setPhase("error"); });
+      const params = new URLSearchParams(sp.toString());
+      params.set("q", t);
+      params.delete("w");
+      router.replace(`${path}?${params.toString()}`, { scroll: false });
+    }, 180);
+    return () => { clearTimeout(timer); ctl.abort(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, attempt]);
+
+  const sel = useMemo(() => {
+    if (!selId) return undefined;
+    return out.results.find((r) => r.id === selId) ?? DICTIONARY.find((d) => d.id === selId);
+  }, [selId, out.results]);
+
+  const setQuery = (v: string) => { setQ(v); inputRef.current?.focus(); };
+  const rowHref = (id: string) => {
+    if (!desk) return `/word/${encodeURIComponent(id)}`;
+    const params = new URLSearchParams({ q: q.trim(), w: id });
+    return `/search?${params.toString()}`;
+  };
+  const results = out.results;
+  const spell = phase === "done" && out.suggestion && results.length > 0;
+  const none = phase === "done" && results.length === 0;
+
+  const body = (
+    <div className="pane flex flex-col gap-3" style={{ flex: 1, minHeight: 0 }}>
+      <h2 className="h1">پیدا کردن واژهٔ تازه</h2>
+      <form role="search" onSubmit={(e) => { e.preventDefault(); app.pushRecent(q); }}>
+        <label htmlFor="sq" className="small muted" style={{ fontWeight: 700 }}>واژهٔ انگلیسی یا معنی فارسی</label>
+        <div className="input-wrap mt-1">
+          <Icon n="search" size={20} />
+          <input ref={inputRef} id="sq" type="search" dir={inputDir(q)} className="input" value={q} autoComplete="off" spellCheck={false} autoFocus={desk}
+            placeholder="مثلاً curious یا recieve" aria-describedby="sh" onChange={(e) => setQ(e.target.value)} onBlur={() => app.pushRecent(q)} />
+        </div>
+        <p id="sh" className="small muted mt-1">غلط املایی هم اشکالی ندارد؛ پیشنهاد می‌دهیم. منبع فعلی: {dictionary.label} ({faN(dictionary.size())} واژه).</p>
+      </form>
+
+      {phase === "start" && (
+        <div className="flex flex-col gap-3 rise">
+          <div className="card flex items-center gap-3">
+            <Sprout size={64} className="breathe shrink-0" />
+            <p className="small muted">یک واژه بنویس تا معنی، تلفظ و مثالش را ببینی. بعد با یک ضربه وارد صف می‌شود.</p>
+          </div>
+          {app.recent.length > 0 && (
+            <>
+              <p className="small muted" style={{ fontWeight: 700 }}>جست‌وجوهای اخیر</p>
+              <div className="flex flex-wrap gap-2">
+                {app.recent.map((x) => <button type="button" key={x} className="chip chip-btn" onClick={() => setQuery(x)}><span dir="auto">{x}</span></button>)}
+              </div>
+            </>
+          )}
+          <p className="small muted" style={{ fontWeight: 700 }}>برای شروع</p>
+          <div className="flex flex-wrap gap-2">
+            {STARTERS.map((x) => <button type="button" key={x} className="chip chip-btn" onClick={() => setQuery(x)}><En sans>{x}</En></button>)}
+          </div>
+        </div>
+      )}
+      {phase === "loading" && (
+        <div className="flex flex-col gap-3" aria-busy="true"><p className="small muted" role="status">در حال جست‌وجو…</p>{[0, 1, 2].map((i) => <Skel key={i} h={64} r={16} />)}</div>
+      )}
+      {phase === "error" && (
+        <div className="banner banner-danger" role="alert">
+          <Icon n="alert" />
+          <div className="flex flex-col gap-2"><p className="small"><b>جست‌وجو انجام نشد.</b> اتصال به واژه‌نامه برقرار نشد؛ چیزی از فهرست تو کم نشده است.</p>
+            <button type="button" className="btn btn-ghost" onClick={() => setAttempt((a) => a + 1)}><Icon n="refresh" size={18} /> تلاش دوباره</button></div>
+        </div>
+      )}
+      {spell && (
+        <div className="banner banner-accent rise" role="status">
+          <Icon n="spark" />
+          <p className="small">«<En sans>{q.trim()}</En>» پیدا نشد. منظورت <button type="button" className="btn btn-soft" style={{ minHeight: 44, padding: "0 12px" }} onClick={() => setQuery(out.suggestion!)}><En sans>{out.suggestion}</En></button> بود؟ نزدیک‌ترین نتیجه‌ها پایین آمده‌اند.</p>
+        </div>
+      )}
+      {none && (
+        <div className="flex flex-col gap-3 scroll" style={{ minHeight: 0 }}>
+          <div className="card text-center flex flex-col items-center gap-2 rise" style={{ padding: 24 }}>
+            <Sprout mood="sleep" size={80} />
+            <b>برای «<span dir="auto">{q.trim()}</span>» چیزی پیدا نشد</b>
+            <p className="small muted">املای واژه را بررسی کن یا معنی فارسی‌اش را بنویس. از کتابخانه هم می‌توانی واژه بیاوری.</p>
+            <Link className="btn btn-soft" href="/library"><Icon n="book" size={18} /> رفتن به کتابخانه</Link>
+          </div>
+          <ManualAdd initial={q.trim()} />
+        </div>
+      )}
+      {phase === "done" && results.length > 0 && (
+        <VList items={results} rowH={88} label="نتیجه‌های جست‌وجو" keyOf={(e) => e.id} render={(e) => {
+          const rec = app.byEn(e.en);
+          return <WordRow item={e} status={statusKey(rec)} stage={rec?.stage} href={rowHref(e.id)} replace={desk} selected={desk && selId === e.id} onQuickAdd={() => app.add(e)} />;
+        }} />
+      )}
+    </div>
+  );
+  if (!desk) return <div className="page-fill">{body}</div>;
+  return (
+    <div className="split">
+      {body}
+      <aside className="scroll" aria-label="جزئیات واژه">
+        {sel ? <WordDetail entry={sel} /> : <PickHint text="یک نتیجه را انتخاب کن تا جزئیاتش اینجا باز شود." />}
+      </aside>
+    </div>
+  );
+}
+
+export default function Page() {
+  return <Suspense><Search /></Suspense>;
 }

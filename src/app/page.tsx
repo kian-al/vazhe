@@ -1,101 +1,106 @@
 "use client";
-
 import Link from "next/link";
-import { useApp } from "@/components/Providers";
+import { useApp } from "@/components/store";
+import { Icon, Skel, Sprout } from "@/components/ui";
+import { stg } from "@/components/words";
+import { faN } from "@/lib/dictionary";
+import { BATCH_MAX } from "@/lib/vocabulary";
 
-function faNumber(value: number): string {
-  return new Intl.NumberFormat("fa-IR").format(value);
-}
+export default function Home() {
+  const { ready, words, queue, batch, storageError } = useApp();
 
-export default function HomePage() {
-  const { words, ready } = useApp();
-  if (!ready) return <p className="loading-state" role="status">دارم صفحه را آماده می‌کنم…</p>;
+  if (!ready) {
+    return (
+      <div className="flex flex-col gap-4" aria-busy="true" aria-label="در حال بارگذاری">
+        <Skel h={34} w="60%" />
+        <div className="cards-2"><Skel h={180} r={22} /><Skel h={180} r={22} /></div>
+        <Skel h={64} r={16} /><Skel h={64} r={16} />
+      </div>
+    );
+  }
 
-  const queued = words.filter((word) => word.status === "queued").length;
-  const active = words.filter((word) => word.status === "active").length;
+  const storageBanner = storageError && (
+    <div className="banner banner-danger" role="alert">
+      <Icon n="alert" />
+      <p className="small"><b>ذخیره‌سازی مرورگر در دسترس نیست.</b> تغییرها فقط تا بستن این صفحه می‌مانند. حالت خصوصی یا پر بودن فضای مرورگر را بررسی کن.</p>
+    </div>
+  );
+
+  if (words.length === 0) {
+    return (
+      <div className="flex flex-col gap-4">
+        {storageBanner}
+        <div className="card flex flex-col items-center text-center gap-3 rise" style={{ padding: 28 }}>
+          <Sprout mood="happy" size={110} className="breathe" />
+          <h2 className="h1">خوش آمدی؛ بیا اولین واژه را بکاریم</h2>
+          <p className="muted">فهرست تو خالی است و همین خوب است — از یک واژه شروع می‌کنیم.</p>
+        </div>
+        <div className="cards-3">
+          <Link className="btn btn-primary" style={{ minHeight: 56 }} href="/search"><Icon n="search" /> جست‌وجوی یک واژه</Link>
+          <Link className="btn btn-ghost" style={{ minHeight: 56 }} href="/library"><Icon n="book" /> شروع از کتابخانه</Link>
+          <Link className="btn btn-ghost" style={{ minHeight: 56 }} href="/words"><Icon n="list" /> برگرداندن واژه‌های نمونه</Link>
+        </div>
+        <div className="card rise" style={{ ...stg(2), borderStyle: "dashed" }}>
+          <div className="flex items-center justify-between gap-2 flex-wrap"><b>مطالعهٔ آزاد</b><span className="chip">وقتی واژه‌ای داشتی باز می‌شود</span></div>
+          <p className="small muted mt-1">مطالعهٔ آزاد همیشه به همهٔ واژه‌های شخصی‌ات دسترسی دارد.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <div className="page-intro">
-        <p className="eyebrow">آرام و پیوسته</p>
-        <h1>امروز سراغ کدوم واژه‌ها بریم؟</h1>
-        <p className="lead">واژه‌ها با چند بار دیدن، کم‌کم جای خودشون رو توی ذهنت پیدا می‌کنن.</p>
+    <div className="flex flex-col gap-4">
+      {storageBanner}
+      <div className="flex items-center gap-3 rise">
+        <Sprout size={76} className="breathe shrink-0" />
+        <div>
+          <h2 className="h1">امروز چه کاری دلت می‌خواهد؟</h2>
+          <p className="muted small">فشاری در کار نیست؛ هر کدام را که خواستی شروع کن.</p>
+        </div>
       </div>
 
-      <section className="card hero-card" aria-labelledby="free-title">
-        <div className="hero-copy">
-          <span className="kicker">هر وقت خواستی، به سبک خودت</span>
-          <h2 id="free-title">مطالعهٔ آزاد</h2>
-          <p>
-            همهٔ واژه‌های شخصی‌ات، از جمله واژه‌های صف و دسته‌های قبلی، همین‌جا در دسترس‌اند؛
-            بدون سقف روزانه.
-          </p>
-          <div className="hero-actions">
-            <Link className="button primary" href="/study?scope=all">
-              شروع با همهٔ واژه‌ها
-              <span className="button-count">{faNumber(words.length)}</span>
-            </Link>
-            <Link className="button secondary" href="/words">دیدن فهرست واژه‌ها</Link>
+      <div className="cards-2">
+        <section className="card rise flex flex-col gap-3" style={{ ...stg(1), padding: 20, borderColor: "var(--accent)", borderWidth: 2 }} aria-labelledby="free-h">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h3 id="free-h" className="h3" style={{ fontSize: 20 }}>مطالعهٔ آزاد</h3>
+            <span className="chip chip-accent"><Icon n="check" size={14} /> همیشه باز</span>
           </div>
-          <p className="quiet-note">این تمرین زمان‌بندی مرور را تغییر نمی‌دهد.</p>
-        </div>
-        <div className="hero-art" aria-hidden="true">
-          <span className="leaf leaf-one">✳</span>
-          <span className="leaf leaf-two">✿</span>
-          <span className="hero-letter">A</span>
-        </div>
-      </section>
-
-      <div className="home-grid">
-        <section className="card info-card" aria-labelledby="scheduled-title">
-          <div className="section-heading">
-            <span className="section-icon" aria-hidden="true">◷</span>
-            <div>
-              <h2 id="scheduled-title">مرور زمان‌بندی‌شده</h2>
-              <p className="muted">جدا از مطالعهٔ آزاد</p>
-            </div>
+          <p>با همهٔ <b>{faN(words.length)}</b> واژهٔ شخصی‌ات، بدون سقف روزانه.</p>
+          <p className="small muted">موعد مرور و پیشرفت رسمی را تغییر نمی‌دهد؛ فقط برای تمرین راحت است.</p>
+          <div className="flex gap-2 flex-wrap">
+            <Link className="btn btn-primary grow" style={{ minHeight: 54 }} href="/study"><Icon n="flip" /> شروع مطالعهٔ آزاد</Link>
+            {queue.length > 0 && <Link className="btn btn-ghost" style={{ minHeight: 54 }} href="/study?scope=queue">فقط واژه‌های صف</Link>}
           </div>
-          <p>
-            زمان‌بندی مرور و ثبت امتیازهای رسمی هنوز به سرویس مرور متصل نشده؛ در این نسخه
-            هیچ موعدی شبیه‌سازی نمی‌شود.
-          </p>
-          <span className="status-pill">در حال آماده‌سازی</span>
         </section>
 
-        <section className="card info-card" aria-labelledby="queue-summary-title">
-          <div className="section-heading">
-            <span className="section-icon" aria-hidden="true">☷</span>
-            <div>
-              <h2 id="queue-summary-title">صف یادگیری</h2>
-              <p className="muted">{faNumber(queued)} واژه منتظرند</p>
-            </div>
+        <section className="card rise flex flex-col gap-3" style={{ ...stg(2), padding: 20, borderStyle: "dashed", borderColor: "var(--edge)", background: "transparent" }} aria-labelledby="sched-h">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h3 id="sched-h" className="h3" style={{ fontSize: 20 }}>مرور زمان‌بندی‌شده</h3>
+            <span className="chip chip-warm"><Icon n="lock" size={14} /> در انتظار اتصال FSRS</span>
           </div>
-          <p>
-            واژه‌های تازه اینجا می‌مانند و در مطالعهٔ آزاد هم قابل مرورند؛ افزودن به صف،
-            دستهٔ فعال را دور نمی‌زند.
-          </p>
-          <Link className="text-link" href="/queue">رفتن به صف <span aria-hidden="true">←</span></Link>
+          <p className="small muted">این بخش جدا از مطالعهٔ آزاد است. تا وقتی FSRS وصل نشده، موعدی محاسبه یا نمایش داده نمی‌شود.</p>
+          <button type="button" className="btn" disabled><Icon n="lock" size={18} /> هنوز فعال نیست</button>
         </section>
       </div>
 
-      <section className="card batch-card" aria-labelledby="batch-title">
-        <div className="section-heading">
-          <span className="section-icon" aria-hidden="true">▦</span>
-          <div>
-            <h2 id="batch-title">دسته‌بندی مرحله‌ای</h2>
-            <p className="muted">{faNumber(active)} واژه در دستهٔ فعال · ظرفیت آینده حداکثر ۱۰۰ واژه</p>
-          </div>
-        </div>
-        <p>
-          قانون پیشروی میان ۵ مرحله هنوز نهایی نشده است. تا روشن‌شدن آن، این نسخه پیشرفت
-          مرحله‌ای یا فارغ‌التحصیلی واژه‌ها را تغییر نمی‌دهد.
-        </p>
-      </section>
-
-      <p className="local-banner" role="note">
-        این نسخهٔ اجرایی محلی است: ورود کاربر، همگام‌سازی سرور، واژه‌نامهٔ زنده و FSRS هنوز
-        وصل نیستند. داده‌ها روی همین مرورگر می‌مانند.
-      </p>
-    </>
+      <h3 className="h3 rise" style={{ ...stg(3), marginTop: 6 }}>ادامه بده</h3>
+      <div className="cards-3">
+        <Link className="card card-lift rise flex items-center gap-3" style={stg(4)} href="/batch">
+          <span className="chip chip-accent icon-tile"><Icon n="leaf" /></span>
+          <span style={{ flex: 1 }}><b>دستهٔ فعال</b><span className="small muted" style={{ display: "block" }}>{faN(batch.length)} از {faN(BATCH_MAX)} واژه</span></span>
+          <Icon n="left" size={18} />
+        </Link>
+        <Link className="card card-lift rise flex items-center gap-3" style={stg(5)} href="/queue">
+          <span className="chip chip-warm icon-tile"><Icon n="layers" /></span>
+          <span style={{ flex: 1 }}><b>صف</b><span className="small muted" style={{ display: "block" }}>{faN(queue.length)} واژه منتظر است</span></span>
+          <Icon n="left" size={18} />
+        </Link>
+        <Link className="card card-lift rise flex items-center gap-3" style={stg(6)} href="/search">
+          <span className="chip icon-tile"><Icon n="search" /></span>
+          <span style={{ flex: 1 }}><b>واژهٔ تازه پیدا کن</b><span className="small muted" style={{ display: "block" }}>جست‌وجو با پیشنهاد املا</span></span>
+          <Icon n="left" size={18} />
+        </Link>
+      </div>
+    </div>
   );
 }

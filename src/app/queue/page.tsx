@@ -1,76 +1,66 @@
 "use client";
-
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { useApp } from "@/components/Providers";
-import { searchWords } from "@/lib/vocabulary";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useApp, useIsDesktop } from "@/components/store";
+import { Icon, Skel, inputDir } from "@/components/ui";
+import { EmptyCard, PickHint, VList, WordDetail, WordRow } from "@/components/words";
+import { faN } from "@/lib/dictionary";
+import { BATCH_MAX, normalizeWord } from "@/lib/vocabulary";
 
-export default function QueuePage() {
-  const { words, ready } = useApp();
-  const [query, setQuery] = useState("");
-  const queued = useMemo(() => words.filter((word) => word.status === "queued"), [words]);
-  const filtered = useMemo(
-    () => (query.trim() ? searchWords(queued, query) : queued),
-    [query, queued],
-  );
+function Queue() {
+  const app = useApp();
+  const desk = useIsDesktop();
+  const sp = useSearchParams();
+  const [q, setQ] = useState("");
+  const items = useMemo(() => {
+    const t = q.trim();
+    const n = normalizeWord(t);
+    return app.queue.filter((w) => !t || normalizeWord(w.en).includes(n) || w.fa.includes(t));
+  }, [app.queue, q]);
+  const selId = sp.get("w");
+  const sel = selId ? app.words.find((w) => w.id === selId) : undefined;
 
-  if (!ready) return <p className="loading-state" role="status">صف در حال آماده‌شدن است…</p>;
-
-  return (
-    <>
-      <div className="page-intro">
-        <p className="eyebrow">واژه‌های بعدی</p>
-        <h1>صف یادگیری</h1>
-        <p className="lead">{new Intl.NumberFormat("fa-IR").format(queued.length)} واژه در صف منتظرند.</p>
+  if (!app.ready) return <div className="flex flex-col gap-3" aria-busy="true">{Array.from({ length: 5 }, (_, i) => <Skel key={i} h={64} r={16} />)}</div>;
+  if (app.queue.length === 0) {
+    return (
+      <EmptyCard title="صف خالی است" action={
+        <div className="flex flex-wrap gap-2 justify-center">
+          <Link className="btn btn-primary" href="/search"><Icon n="search" size={18} /> جست‌وجوی واژه</Link>
+          <Link className="btn btn-ghost" href="/library"><Icon n="book" size={18} /> از کتابخانه</Link>
+        </div>
+      }>واژه‌های تازه که اضافه کنی، اینجا به ترتیب افزودن منتظر دستهٔ فعال می‌مانند.</EmptyCard>
+    );
+  }
+  const list = (
+    <div className="pane flex flex-col gap-3" style={{ flex: 1, minHeight: 0 }}>
+      <div className="flex items-end justify-between gap-2"><h2 className="h1">صف</h2><span className="small muted">{faN(app.queue.length)} واژه</span></div>
+      <div>
+        <label htmlFor="qq" className="small muted" style={{ fontWeight: 700 }}>جست‌وجو در صف</label>
+        <div className="input-wrap mt-1"><Icon n="search" size={20} /><input id="qq" type="search" dir={inputDir(q)} className="input" value={q} autoComplete="off" spellCheck={false} placeholder="بخشی از واژه یا معنی" onChange={(e) => setQ(e.target.value)} /></div>
       </div>
-      <section className="card list-card">
-        {queued.length ? (
-          <>
-            <label className="field-label" htmlFor="queue-filter">جست‌وجو در صف</label>
-            <input
-              id="queue-filter"
-              name="queue-filter"
-              type="search"
-              autoComplete="off"
-              placeholder="نام واژه یا معنی…"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            <div className="queue-actions">
-              <Link className="button primary" href="/study?scope=queue">مطالعهٔ آزاد واژه‌های صف</Link>
-              <Link className="text-link" href="/search">پیداکردن واژهٔ تازه</Link>
+      {items.length === 0 ? <p className="muted small" role="status">هیچ واژه‌ای در صف با این جست‌وجو نیست.</p> : (
+        <VList items={items} rowH={88} label="صف" keyOf={(w) => w.id} render={(w) => (
+          <div className="flex items-center gap-1" style={{ height: "100%" }}>
+            <div style={{ flex: 1, minWidth: 0, height: "100%" }}>
+              <WordRow item={w} status="queue" href={desk ? `/queue?w=${encodeURIComponent(w.id)}` : `/word/${encodeURIComponent(w.id)}`} replace={desk} selected={desk && selId === w.id} />
             </div>
-            {filtered.length ? (
-              <ul className="word-list">
-                {filtered.map((word) => (
-                  <li key={word.id}>
-                    <Link className="word-row" href={`/word/${encodeURIComponent(word.id)}`}>
-                      <span className="word-copy">
-                        <b className="english" lang="en" dir="ltr" translate="no">{word.en}</b>
-                        <span className="word-meaning">{word.fa}</span>
-                      </span>
-                      <span className="word-status queued">در صف</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="empty-state">با این عبارت چیزی در صف پیدا نشد.</p>
-            )}
-          </>
-        ) : (
-          <div className="empty-state">
-            <span className="empty-illustration" aria-hidden="true">✿</span>
-            <h2>صف فعلاً خالی است</h2>
-            <p>واژه‌ای که از جست‌وجو پیدا کنی یا دستی اضافه کنی، اینجا می‌ماند.</p>
-            <Link className="button primary" href="/search">رفتن به جست‌وجو</Link>
+            <button type="button" className="btn btn-ghost icon-btn" aria-label={`برداشتن «${w.en}» از صف`} onClick={() => app.unqueue(w.id)}><Icon n="x" size={18} /></button>
           </div>
-        )}
-      </section>
-      <p className="local-banner">
-        واژه‌های صف در مطالعهٔ آزاد هم در دسترس‌اند. شروع دستهٔ بعدی تا تصمیم‌گیری دربارهٔ
-        قواعد ۵ مرحله‌ای غیرفعال می‌ماند.
-      </p>
-    </>
+        )} />
+      )}
+      <p className="small muted">صف سقف ندارد. دستهٔ فعال حداکثر {faN(BATCH_MAX)} واژه دارد. برداشتن از صف، واژه را از فهرستت حذف نمی‌کند.</p>
+    </div>
   );
+  if (!desk) return <div className="page-fill">{list}</div>;
+  return (
+    <div className="split">
+      {list}
+      <aside className="scroll" aria-label="جزئیات واژه">{sel ? <WordDetail entry={sel} record={sel} /> : <PickHint text="یک واژه از صف را انتخاب کن." />}</aside>
+    </div>
+  );
+}
+
+export default function Page() {
+  return <Suspense><Queue /></Suspense>;
 }

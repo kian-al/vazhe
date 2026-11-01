@@ -1,62 +1,103 @@
 "use client";
-
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { useApp } from "@/components/Providers";
-import { searchWords } from "@/lib/vocabulary";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useApp, useIsDesktop } from "@/components/store";
+import { Icon, Skel, inputDir } from "@/components/ui";
+import { EmptyCard, PickHint, VList, WordDetail, WordRow } from "@/components/words";
+import { fa, faN } from "@/lib/dictionary";
+import { filterPersonal, statusKey } from "@/lib/vocabulary";
 
-function StatusLabel({ status }: { status: string }) {
-  const label = status === "queued" ? "در صف" : status === "completed" ? "تکمیل‌شده" : "دستهٔ فعال";
-  return <span className={`word-status ${status}`}>{label}</span>;
+type Filter = "all" | "queue" | "batch" | "done";
+const FILTERS: { id: Filter; label: string }[] = [
+  { id: "all", label: "همه" }, { id: "queue", label: "در صف" }, { id: "batch", label: "دستهٔ فعال" }, { id: "done", label: "مرحلهٔ ۵ گذرانده" },
+];
+
+function Words() {
+  const app = useApp();
+  const desk = useIsDesktop();
+  const sp = useSearchParams();
+  const [q, setQ] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [stage, setStage] = useState(0);
+  const [confirmSamples, setConfirmSamples] = useState(false);
+  const ordered = useMemo(() => [...app.words].reverse(), [app.words]);
+  const items = useMemo(() => filterPersonal(ordered, q, filter, stage), [ordered, q, filter, stage]);
+  const selId = sp.get("w");
+  const sel = selId ? app.words.find((w) => w.id === selId) : undefined;
+
+  if (!app.ready) return <div className="flex flex-col gap-3" aria-busy="true" aria-label="در حال بارگذاری">{Array.from({ length: 7 }, (_, i) => <Skel key={i} h={64} r={16} />)}</div>;
+  if (app.words.length === 0) {
+    return (
+      <EmptyCard mood="happy" title="فهرست تو هنوز خالی است" action={
+        <div className="flex flex-wrap gap-2 justify-center">
+          <Link className="btn btn-primary" href="/search"><Icon n="search" size={18} /> جست‌وجوی اولین واژه</Link>
+          <button type="button" className="btn btn-ghost" onClick={app.restoreSamples}>برگرداندن واژه‌های نمونه</button>
+        </div>
+      }>هر واژه‌ای که اضافه کنی اینجا می‌آید؛ فهرست سقف ندارد.</EmptyCard>
+    );
+  }
+
+  const list = (
+    <div className="pane flex flex-col gap-3" style={{ flex: 1, minHeight: 0 }}>
+      <div className="flex items-end justify-between gap-2 flex-wrap">
+        <h2 className="h1">واژه‌های من</h2>
+        <span className="small muted" aria-live="polite">{faN(items.length)} از {faN(app.words.length)} واژه</span>
+      </div>
+      {app.hasSamples && (
+        <div className="banner banner-warm" role="note">
+          <Icon n="info" size={18} />
+          <div className="flex flex-col gap-2" style={{ flex: 1 }}>
+            <p className="small">چند <b>واژهٔ نمونه</b> برای دیدن حالت‌ها در فهرست‌اند؛ مرحله‌هایشان هم نمونه است.</p>
+            {confirmSamples ? (
+              <span className="flex gap-2 flex-wrap">
+                <button type="button" className="btn btn-danger-ghost" onClick={() => { app.clearSamples(); setConfirmSamples(false); }}>بله، نمونه‌ها حذف شوند</button>
+                <button type="button" className="btn btn-ghost" onClick={() => setConfirmSamples(false)}>انصراف</button>
+              </span>
+            ) : (
+              <button type="button" className="btn btn-ghost" style={{ alignSelf: "flex-start" }} onClick={() => setConfirmSamples(true)}><Icon n="trash" size={18} /> حذف واژه‌های نمونه</button>
+            )}
+          </div>
+        </div>
+      )}
+      <div>
+        <label htmlFor="wq" className="small muted" style={{ fontWeight: 700 }}>جست‌وجو در فهرست تو</label>
+        <div className="input-wrap mt-1">
+          <Icon n="search" size={20} />
+          <input id="wq" type="search" dir={inputDir(q)} className="input" value={q} autoComplete="off" spellCheck={false} placeholder="انگلیسی یا فارسی، مثلاً cur یا کنجکاو" onChange={(e) => setQ(e.target.value)} />
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2 items-center" role="group" aria-label="فیلتر وضعیت">
+        {FILTERS.map((f) => (
+          <button type="button" key={f.id} className="chip chip-btn" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>{f.label}</button>
+        ))}
+        <label className="sr-only" htmlFor="stg">مرحله</label>
+        <select id="stg" className="select" value={stage} onChange={(e) => setStage(Number(e.target.value))}>
+          <option value={0}>همهٔ مرحله‌ها</option>
+          {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>مرحلهٔ {fa(n)}</option>)}
+        </select>
+      </div>
+      {items.length === 0 ? (
+        <EmptyCard title="چیزی با این فیلتر پیدا نشد" action={<button type="button" className="btn btn-soft" onClick={() => { setQ(""); setFilter("all"); setStage(0); }}>پاک‌کردن فیلترها</button>} />
+      ) : (
+        <VList items={items} rowH={84} label="فهرست واژه‌های شخصی" keyOf={(w) => w.id} render={(w) => (
+          <WordRow item={w} status={statusKey(w)} stage={w.stage} selected={desk && selId === w.id}
+            href={desk ? `/words?w=${encodeURIComponent(w.id)}` : `/word/${encodeURIComponent(w.id)}`} replace={desk} />
+        )} />
+      )}
+    </div>
+  );
+  if (!desk) return <div className="page-fill">{list}</div>;
+  return (
+    <div className="split">
+      {list}
+      <aside className="scroll" aria-label="جزئیات واژه">
+        {sel ? <WordDetail entry={sel} record={sel} /> : <PickHint text="معنی، تلفظ و مثال اینجا باز می‌شود؛ جای فهرست عوض نمی‌شود." />}
+      </aside>
+    </div>
+  );
 }
 
-export default function WordsPage() {
-  const { words, ready } = useApp();
-  const [query, setQuery] = useState("");
-  const filtered = useMemo(
-    () => (query.trim() ? searchWords(words, query) : words),
-    [query, words],
-  );
-
-  if (!ready) return <p className="loading-state" role="status">فهرست واژه‌ها در حال آماده‌شدن است…</p>;
-
-  return (
-    <>
-      <div className="page-intro">
-        <p className="eyebrow">کتابچهٔ شخصی تو</p>
-        <h1>همهٔ واژه‌های من</h1>
-        <p className="lead">{new Intl.NumberFormat("fa-IR").format(words.length)} واژه · هیچ حالتی از فهرست حذف نمی‌شود.</p>
-      </div>
-      <section className="card list-card">
-        <label className="field-label" htmlFor="word-filter">جست‌وجو در واژه‌هایم</label>
-        <input
-          id="word-filter"
-          name="word-filter"
-          type="search"
-          autoComplete="off"
-          placeholder="مثلاً resilient یا معنی فارسی…"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        {filtered.length ? (
-          <ul className="word-list">
-            {filtered.map((word) => (
-              <li key={word.id}>
-                <Link className="word-row" href={`/word/${encodeURIComponent(word.id)}`}>
-                  <span className="word-copy">
-                    <b className="english" lang="en" dir="ltr" translate="no">{word.en}</b>
-                    <span className="word-meaning">{word.fa}</span>
-                  </span>
-                  <StatusLabel status={word.status} />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="empty-state">واژه‌ای با این عبارت در فهرستت نیست.</p>
-        )}
-      </section>
-      <Link className="button secondary" href="/study?scope=all">مطالعهٔ آزاد همهٔ واژه‌ها</Link>
-    </>
-  );
+export default function Page() {
+  return <Suspense><Words /></Suspense>;
 }
