@@ -81,7 +81,7 @@ function Popup({ word, onWord }: { word: string | null; onWord: (w: string | nul
         </div>
       </form>
       {!app.online && (
-        <div className="banner banner-warm" role="status" style={{ margin: "10px 14px 0" }}><Icon n="wifioff" size={20} /><p className="small"><b>اتصال برقرار نیست.</b> در این پیش‌نمایش واژه‌نامه محلی است و کار می‌کند؛ افزونهٔ واقعی برای جست‌وجو به اتصال نیاز خواهد داشت.</p></div>
+        <div className="banner banner-warm" role="status" style={{ margin: "10px 14px 0" }}><Icon n="wifioff" size={20} /><p className="small"><b>اتصال برقرار نیست.</b> جست‌وجوی واژه‌نامه به سرور متصل است و بعد از برگشت اینترنت دوباره کار می‌کند.</p></div>
       )}
       <div className="scroll" style={{ flex: 1, padding: 14, minHeight: 0 }} aria-live="polite">
         {look.phase === "error" ? (
@@ -96,7 +96,7 @@ function Popup({ word, onWord }: { word: string | null; onWord: (w: string | nul
         ) : look.phase === "missing" ? (
           <div className="flex flex-col items-center text-center gap-2" style={{ padding: "24px 8px" }}>
             <Sprout mood="sleep" size={80} />
-            <b>«<span dir="auto">{look.word}</span>» در واژه‌نامهٔ نمونه نیست</b>
+            <b>«<span dir="auto">{look.word}</span>» در واژه‌نامه پیدا نشد</b>
             <p className="small muted">در برنامهٔ کامل می‌توانی دستی اضافه‌اش کنی.</p>
             <Link className="btn btn-ghost" href={`/search?q=${encodeURIComponent(look.word)}`} target="_blank"><Icon n="ext" size={18} /> باز کردن در برنامهٔ کامل</Link>
           </div>
@@ -113,7 +113,8 @@ function Popup({ word, onWord }: { word: string | null; onWord: (w: string | nul
             <div className="flex items-center gap-2"><Ipa>{entry.ipa}</Ipa>
               <button type="button" className="btn btn-soft icon-btn" onClick={() => speak(entry.en)} aria-label="پخش تلفظ با صدای مرورگر"><Icon n="volume" /></button></div>
             <p style={{ fontSize: 20, fontWeight: 800 }}>{entry.fa}</p>
-            <div className="card" style={{ padding: 12 }}><En as="p" style={{ fontSize: 16, lineHeight: 1.6 }}>{entry.exampleEn}</En><p className="small muted">{entry.exampleFa}</p></div>
+            {entry.sourceUrl && <p className="small muted">منبع: <a className="link" href={entry.sourceUrl} target="_blank" rel="noreferrer">ویکی‌واژه</a> · {entry.license}</p>}
+            {entry.exampleEn && <div className="card" style={{ padding: 12 }}><En as="p" style={{ fontSize: 16, lineHeight: 1.6 }}>{entry.exampleEn}</En><p className="small muted">{entry.exampleFa}</p></div>}
             {s === "new" && <div style={{ position: "relative" }}><button type="button" className="btn btn-primary w-full" onClick={() => { if (app.add(entry)) setBk((x) => x + 1); }}><Icon n="plus" /> افزودن به صف</button>{bk > 0 && <Burst k={bk} />}</div>}
             {s === "queue" && <div className="banner banner-warm"><Icon n="layers" size={18} /><p className="small"><b>در صف است.</b> منتظر ورود به دستهٔ فعال.</p></div>}
             {s === "mine" && <div className="banner banner-accent"><Icon n="list" size={18} /><p className="small"><b>از قبل در فهرست توست.</b> افزودن دوباره لازم نیست.</p></div>}
@@ -127,7 +128,7 @@ function Popup({ word, onWord }: { word: string | null; onWord: (w: string | nul
         {app.toast && <div className="toast-box toast" key={app.toast.id}><Icon n={app.toast.kind === "warn" ? "alert" : "check"} size={20} /><span className="small" style={{ color: "inherit" }}>{app.toast.text}</span></div>}
       </div>
       <footer className="small muted" style={{ padding: "8px 14px", borderTop: "1px solid var(--line)" }}>
-        {faN(app.words.length)} واژه در فهرست تو · ذخیره در همین مرورگر
+        {faN(app.words.length)} واژه · {app.syncStatus === "saved" ? "ذخیره‌شده روی سرور" : app.syncStatus === "saving" ? "در حال ذخیره…" : app.syncStatus === "local" ? "ذخیرهٔ محلی" : "ذخیرهٔ سروری تأیید نشده"}
       </footer>
     </section>
   );
@@ -142,9 +143,15 @@ function ExtensionPreview() {
         <Link href="/" className="btn btn-ghost"><Icon n="right" size={18} /> بازگشت به برنامه</Link>
         <div className="grow">
           <h1 className="h3">پیش‌نمایش افزونهٔ مرورگر</h1>
-          <p className="small muted">این یک نمای وب از افزونه است، نه افزونهٔ نصب‌شده. افزودن به صف واقعاً در فهرست همین مرورگر ذخیره می‌شود.</p>
+          <p className="small muted">این یک نمای وب از افزونه است، نه افزونهٔ نصب‌شده. جست‌وجو و افزودن به صف به همان داده‌های برنامه وصل است.</p>
         </div>
       </header>
+      <section className="card flex flex-col gap-2" style={{margin:"16px",padding:20}}>
+        <h2 className="h3">نصب نسخهٔ آزمایشی افزونه</h2>
+        <p>افزونهٔ Chrome و Edge واژهٔ انتخاب‌شده یا تایپ‌شده را برای جست‌وجو در سایت باز می‌کند؛ افزودن به صف در سایت انجام می‌شود. این نسخه در فروشگاه مرورگر منتشر نشده است.</p>
+        <a className="btn btn-primary" href="/downloads/vazhe-extension.zip" download>دریافت افزونه</a>
+        <p className="small muted">فایل را از حالت فشرده خارج کن؛ در chrome://extensions یا edge://extensions حالت توسعه‌دهنده را فعال کن، «Load unpacked» را بزن و پوشهٔ استخراج‌شده را انتخاب کن. پیش‌نمایش زیر طرحی جدا از افزونهٔ نصب‌شدنی است.</p>
+      </section>
       <main id="main" className="ext-stage">
         <ReadingPage picked={word} onPick={setWord} />
         <Popup word={word} onWord={setWord} />
