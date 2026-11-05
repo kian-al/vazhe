@@ -208,7 +208,7 @@ function Study() {
           <b>میان‌برها</b>
           <p className="small muted"><kbd>Space</kbd> نمایش پاسخ</p>
           <p className="small muted"><kbd>۱</kbd>–<kbd>۴</kbd> امتیاز</p>
-          <p className="small muted">امتیازها زمان مرور بعدی را تعیین نمی‌کنند؛ FSRS هنوز وصل نیست.</p>
+          <p className="small muted">امتیازهای مطالعهٔ آزاد زمان مرور بعدی را تغییر نمی‌دهند؛ برای FSRS از مرور زمان‌بندی‌شده استفاده کن.</p>
         </aside>
       </div>
 

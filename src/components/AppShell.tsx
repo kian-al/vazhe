@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useApp } from "./store";
 import { Icon, Sprout } from "./ui";
+import { SyncStatus } from "./SyncStatus";
 import { faN } from "@/lib/dictionary";
 
 const TABS = [
@@ -15,7 +16,7 @@ const TABS = [
 ] as const;
 
 function tabOf(path: string): string {
-  if (path === "/" || path.startsWith("/study") || path.startsWith("/batch")) return "home";
+  if (path === "/" || path.startsWith("/study") || path.startsWith("/review") || path.startsWith("/batch")) return "home";
   if (path.startsWith("/words") || path.startsWith("/word/")) return "words";
   if (path.startsWith("/search")) return "search";
   if (path.startsWith("/queue")) return "queue";
@@ -33,6 +34,7 @@ function titleOf(path: string): string {
   if (path.startsWith("/library/")) return "کتاب";
   if (path.startsWith("/library")) return "کتابخانه";
   if (path.startsWith("/batch")) return "دستهٔ فعال";
+  if (path.startsWith("/review")) return "مرور زمان‌بندی‌شده";
   return "واژه";
 }
 
@@ -50,7 +52,7 @@ const FILL = ["/words", "/search", "/queue"];
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname() || "/";
   const router = useRouter();
-  const { queue, toast, bump, online, hasSamples } = useApp();
+  const { queue, toast, bump, online, syncStatus } = useApp();
 
   if (path.startsWith("/extension")) return <>{children}</>;
 
@@ -85,10 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link href="/batch" className="tab" aria-current={path.startsWith("/batch") ? "page" : undefined}><Icon n="leaf" /> دستهٔ فعال</Link>
           <div style={{ flex: 1, minHeight: 16 }} />
           <Link href="/extension" className="tab"><Icon n="puzzle" /> <span style={{ flex: 1 }}>پیش‌نمایش افزونه</span></Link>
-          <div className="banner banner-warm mt-2" role="note">
-            <Icon n="info" size={18} />
-            <p className="small">داده‌ها فقط در همین مرورگر ذخیره می‌شوند؛ هنوز حساب کاربری و همگام‌سازی نداریم.{hasSamples ? " واژه‌های نمونه را در صفحهٔ واژه‌ها می‌توانی حذف کنی." : ""}</p>
-          </div>
+          <div className="sidebar-note"><b>هر واژه، یک قدم نزدیک‌تر.</b><p className="small muted">با ریتم خودت یاد بگیر؛ فشاری در کار نیست.</p><Link href="/about" className="link small">داده‌ها و حریم خصوصی</Link></div>
         </nav>
       )}
 
@@ -107,10 +106,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           </header>
         )}
+        {!focus && <SyncStatus />}
+        {(syncStatus === "error" || syncStatus === "conflict") && <div className="banner banner-danger"><p className="small">{syncStatus === "conflict" ? "در تب دیگری داده تغییر کرده است. نسخهٔ محلی را نگه داشته‌ایم و برای جلوگیری از پاک‌شدن داده، همگام‌سازی متوقف شد." : "ذخیرهٔ سروری فعلاً در دسترس نیست؛ تغییرها ممکن است فقط روی همین مرورگر بمانند."}</p></div>}
         {!online && (
           <div className="banner banner-warm offline" role="status">
             <Icon n="wifioff" size={20} />
-            <p className="small"><b>اتصال اینترنت قطع است.</b> فهرست، صف و مطالعهٔ آزاد کار می‌کنند، چون داده‌ها روی همین مرورگرند. واژه‌نامهٔ آنلاین هنوز وصل نیست.</p>
+            <p className="small"><b>اتصال اینترنت قطع است.</b> فهرست قبلی برای مطالعه در دسترس است. جست‌وجو و ذخیرهٔ سروری تا برگشت اتصال ممکن نیست.</p>
           </div>
         )}
         <main id="main" className={`main ${fill ? "fill" : ""}`} tabIndex={-1}>
