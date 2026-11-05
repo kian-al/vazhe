@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "واژه | Vazhe",
+  "version": "1.0.0",
+  "description": "جست‌وجوی واژه‌های انگلیسی و افزودن آن‌ها به مجموعهٔ واژه",
+  "permissions": ["contextMenus"],
+  "background": {"service_worker": "background.js"},
+  "action": {"default_title": "جست‌وجو در واژه", "default_popup": "popup.html"}
+}
