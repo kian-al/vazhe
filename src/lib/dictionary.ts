@@ -9,6 +9,10 @@ export interface DictionaryEntry {
   fa: string;
   exampleEn: string;
   exampleFa: string;
+  sourceUrl?: string;
+  license?: string;
+  attribution?: string;
+  quality?: string;
 }
 
 type Row = [en: string, ipa: string, pos: string, fa: string, exEn: string, exFa: string];
