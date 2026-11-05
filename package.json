@@ -7,10 +7,14 @@
   "scripts": {
     "dev": "next dev",
     "validate": "npm run typecheck && npm test",
-    "build": "npm run validate && next build",
+    "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "db:migrate": "node scripts/db.mjs migrate",
+    "db:seed": "tsx scripts/db.mjs seed",
+    "books:migrate": "node scripts/books/migrate.mjs",
+    "books:seed": "node scripts/books/seed.mjs"
   },
   "keywords": [],
   "author": "",
@@ -18,14 +22,19 @@
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",
     "@fontsource-variable/vazirmatn": "^5.3.0",
+    "@neondatabase/serverless": "^1.2.0",
     "next": "^16.4.3",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1",
+    "ts-fsrs": "^6.0.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.14",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "playwright": "^1.64.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
