@@ -34,7 +34,7 @@ function Queue() {
   }
   const list = (
     <div className="pane flex flex-col gap-3" style={{ flex: 1, minHeight: 0 }}>
-      <div className="flex items-end justify-between gap-2"><h2 className="h1">صف</h2><span className="small muted">{faN(app.queue.length)} واژه</span></div>
+      <header className="queue-heading"><p className="eyebrow">برای قدم‌های بعد</p><div className="flex items-center justify-between gap-2"><h2 className="h1">صف یادگیری تو</h2><span className="chip chip-accent">{faN(app.queue.length)} واژه</span></div><p className="small muted">این واژه‌ها منتظرت می‌مانند؛ لازم نیست برای خواندنشان منتظر بمانی.</p><div className="queue-actions"><Link href="/study?scope=queue" className="btn btn-primary"><Icon n="flip" size={18}/>مطالعهٔ صف</Link><Link href="/search" className="btn btn-ghost"><Icon n="plus" size={18}/>واژهٔ تازه</Link></div></header>
       <div>
         <label htmlFor="qq" className="small muted" style={{ fontWeight: 700 }}>جست‌وجو در صف</label>
         <div className="input-wrap mt-1"><Icon n="search" size={20} /><input id="qq" type="search" dir={inputDir(q)} className="input" value={q} autoComplete="off" spellCheck={false} placeholder="بخشی از واژه یا معنی" onChange={(e) => setQ(e.target.value)} /></div>
@@ -49,14 +49,14 @@ function Queue() {
           </div>
         )} />
       )}
-      <p className="small muted">صف سقف ندارد. دستهٔ فعال حداکثر {faN(BATCH_MAX)} واژه دارد. برداشتن از صف، واژه را از فهرستت حذف نمی‌کند.</p>
+      <footer className="queue-policy small"><Icon n="info" size={18}/><p>صف سقف مطالعه ندارد. هر دسته حداکثر {faN(BATCH_MAX)} واژه دارد؛ دستهٔ بعد بعد از پایان مرحلهٔ پنجم همهٔ اعضا باز می‌شود. برداشتن از صف، واژه را حذف نمی‌کند. <Link href="/batch" className="link">دیدن دستهٔ فعال</Link></p></footer>
     </div>
   );
   if (!desk) return <div className="page-fill">{list}</div>;
   return (
     <div className="split">
       {list}
-      <aside className="scroll" aria-label="جزئیات واژه">{sel ? <WordDetail entry={sel} record={sel} /> : <PickHint text="یک واژه از صف را انتخاب کن." />}</aside>
+      <aside className="scroll" aria-label="جزئیات واژه">{sel ? <WordDetail entry={sel} record={sel} /> : <PickHint text="روی یک واژه بزن؛ معنی و مثالش همین‌جا باز می‌شود." />}</aside>
     </div>
   );
 }

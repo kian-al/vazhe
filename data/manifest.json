@@ -1,0 +1,14 @@
+{
+  "entries": 5150,
+  "source": "https://kaikki.org/dictionary/English/",
+  "upstream": "https://en.wiktionary.org",
+  "license": "CC BY-SA 4.0",
+  "changes": [
+    "Persian character normalization and removal of optional vocalization marks",
+    "Direct translation selection and deduplication",
+    "One part of speech per word",
+    "Examples and frequency data deliberately excluded"
+  ],
+  "sha256": "aa696139555cfba0f4fb16a3d1240e04984501af2e4e9c7a97722dbd1fb6fcb4",
+  "quality": "Community data, not editorially reviewed; translations may represent multiple senses."
+}

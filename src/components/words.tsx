@@ -51,10 +51,10 @@ export function WordRow({ item, status, stage, href, replace, selected, onQuickA
   const isDupe = dupe && byEn(item.en)?.id === dupe;
   return (
     <div className={`flex items-center gap-1 ${isDupe ? "dupe-pulse" : ""}`} style={{ height: "100%", borderRadius: 16 }}>
-      <Link href={href} replace={replace} scroll={!replace} className="row" aria-current={selected ? "true" : undefined} data-selected={selected ? "true" : undefined} style={{ flex: 1, minWidth: 0 }}>
+      <Link href={href} prefetch={false} replace={replace} scroll={!replace} className="row" aria-current={selected ? "true" : undefined} data-selected={selected ? "true" : undefined} style={{ flex: 1, minWidth: 0 }}>
         <span style={{ minWidth: 0, flex: 1, display: "block" }}>
           <span className="flex items-baseline gap-2 flex-wrap" style={{ justifyContent: "flex-start" }}>
-            <En style={{ fontSize: 21, fontWeight: 600 }}>{item.en}</En>
+            <En style={{ fontSize: 16, fontWeight: 600 }}>{item.en}</En>
             <Ipa>{item.ipa}</Ipa>
           </span>
           <span className="small muted truncate" style={{ display: "block" }}>{item.fa}</span>
@@ -104,13 +104,15 @@ export function WordDetail({ entry, record: recordProp }: { entry: DictionaryEnt
           <button type="button" className="btn btn-soft icon-btn" onClick={() => { if (!speak(w.en)) app.notify("این مرورگر تلفظ صوتی ندارد.", "warn"); }} aria-label={`پخش تلفظ ${w.en} با صدای مرورگر`}><Icon n="volume" /></button>
           <span className="small muted">صدای مرورگر؛ فایل صوتی واژه‌نامه هنوز وصل نیست</span>
         </div>
-        <p style={{ fontSize: 22, fontWeight: 800, marginTop: 12, lineHeight: 1.6 }}>{w.fa}</p>
+        <p style={{ fontSize: 24, fontWeight: 800, marginTop: 12, lineHeight: 1.6 }}>{w.fa}</p>
       </section>
+
+      {entry.sourceUrl && <p className="source-credit small">منبع: <a href={entry.sourceUrl} target="_blank" rel="noreferrer" className="link">ویکی‌واژه</a> · {entry.license} · <Link href="/about" className="link">دربارهٔ داده‌ها</Link><br/>ترجمه‌های جامعهٔ کاربران؛ ممکن است چند معنی متفاوت باشند.</p>}
 
       {w.exampleEn ? (
         <section className="card" aria-label="مثال">
           <p className="small muted" style={{ fontWeight: 700 }}>مثال</p>
-          <En as="p" style={{ fontSize: 19, lineHeight: 1.6, marginTop: 6 }}><Marked text={w.exampleEn} word={w.en} /></En>
+          <En as="p" style={{ fontSize: 16, lineHeight: 1.6, marginTop: 6 }}><Marked text={w.exampleEn} word={w.en} /></En>
           {w.exampleFa && <p className="small muted" style={{ marginTop: 4 }}>{w.exampleFa}</p>}
         </section>
       ) : (
@@ -150,7 +152,7 @@ export function WordDetail({ entry, record: recordProp }: { entry: DictionaryEnt
         {(s === "active" || s === "done") && record && (
           <>
             <div className="flex items-center gap-3"><Pips stage={record.stage} /><span className="small">{record.stage ? `مرحلهٔ ${fa(record.stage)} از ۵` : "در دستهٔ فعال"}{record.source === "sample" ? " (نمونه)" : ""}</span></div>
-            <div className="banner banner-accent"><Icon n="info" size={18} /><p className="small">قانون جابه‌جایی بین مرحله‌ها <b>تصمیم‌گیری‌نشده</b> است؛ این عدد فقط جایگاه را نشان می‌دهد و با FSRS یکی نیست.</p></div>
+            <div className="banner banner-accent"><Icon n="info" size={18} /><p className="small">مرور زمان‌بندی‌شده می‌تواند مرحله را تغییر دهد؛ مرحله‌های یادگیری از حالت‌های داخلی FSRS جدا هستند.</p></div>
           </>
         )}
         {record && (

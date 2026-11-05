@@ -1,16 +1,18 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "@/components/store";
 import { Burst, Icon, Skel } from "@/components/ui";
 import { EmptyCard, stg, WordRow } from "@/components/words";
 import { fa, faN } from "@/lib/dictionary";
-import { BATCH_MAX, canStartNextBatch, isBatchComplete, statusKey } from "@/lib/vocabulary";
+import { BATCH_MAX, canStartNextBatch, dueWords, isBatchComplete, statusKey } from "@/lib/vocabulary";
 
 export default function BatchPage() {
   const app = useApp();
   const [shake, setShake] = useState(0);
   const [why, setWhy] = useState(false);
+  const [now, setNow] = useState(0);
+  useEffect(() => { setNow(Date.now()); const id = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(id); }, []);
   if (!app.ready) return <div className="flex flex-col gap-3" aria-busy="true"><Skel h={220} r={22} /><Skel h={120} r={22} /></div>;
   const batch = app.batch;
   const done = batch.filter((w) => w.status === "completed").length;
@@ -18,6 +20,7 @@ export default function BatchPage() {
   const canNext = canStartNextBatch(app.state);
   const dist = [1, 2, 3, 4, 5].map((n) => batch.filter((w) => w.stage === n).length);
   const sample = batch.some((w) => w.source === "sample");
+  const due = now ? dueWords(app.state, now).length : 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -25,7 +28,8 @@ export default function BatchPage() {
 
       {batch.length === 0 ? (
         <EmptyCard title="هنوز دسته‌ای ساخته نشده" action={<Link className="btn btn-ghost" href="/queue"><Icon n="layers" size={18} /> دیدن صف ({faN(app.queue.length)})</Link>}>
-          قانون انتخاب واژه‌ها از صف برای ساختن دسته هنوز تصمیم‌گیری نشده است؛ برای همین دسته‌ای خودکار ساخته نمی‌شود.
+          با ساخت دسته، تا {faN(BATCH_MAX)} واژهٔ قدیمی‌ترِ صف (به ترتیب ورود) وارد مرحلهٔ ۱ می‌شوند و اولین مرورشان همان لحظه آماده است.
+          {app.queue.length > 0 && <button type="button" className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => app.startBatch()}><Icon n="plus" /> ساخت دستهٔ تازه از صف</button>}
         </EmptyCard>
       ) : (
         <section className="card flex flex-col gap-3 rise" aria-label="ظرفیت دسته">
@@ -40,7 +44,8 @@ export default function BatchPage() {
                 <b className="small" style={{ width: 28, textAlign: "left" }}>{fa(n)}</b></div>
             ))}
           </div>
-          <div className="banner banner-warm"><Icon n="info" size={18} /><p className="small"><b>قانون پیشروی بین مرحله‌ها تصمیم‌گیری‌نشده است.</b> این نمودار فقط توزیع فعلی را نشان می‌دهد و ربطی به FSRS ندارد؛ برنامه هیچ واژه‌ای را خودکار جلو نمی‌برد.</p></div>
+          <div className="banner"><Icon n="info" size={18} /><p className="small"><b>قانون مرحله‌ها:</b> در مرور زمان‌بندی‌شده «یادم بود» یا «آسان بود» یک مرحله جلو می‌برد، «سخت بود» همان مرحله و «فراموش کردم» یک مرحله عقب. موفقیت در مرحلهٔ ۵ یعنی تکمیل. مطالعهٔ آزاد مرحله را تغییر نمی‌دهد.</p></div>
+          <div className="flex items-center justify-between gap-2 flex-wrap"><span className="small muted">{faN(due)} واژه همین حالا آمادهٔ مرور</span><Link className="btn btn-soft" href="/review"><Icon n="clock" size={18} /> مرور زمان‌بندی‌شده</Link></div>
         </section>
       )}
 
@@ -56,7 +61,7 @@ export default function BatchPage() {
           </div>
           {why && <p id="why-locked" className="small muted">این قفل فقط ساختن دستهٔ بعدی را می‌بندد؛ دیدن واژه‌ها، جست‌وجو، صف و مطالعهٔ آزاد همیشه باز است.</p>}
           {complete ? (
-            <button type="button" className="btn btn-primary" disabled={!canNext} onClick={() => app.notify("ساختن دستهٔ بعدی به قانون ورود از صف وابسته است که هنوز تصمیم‌گیری نشده.", "warn")}><Icon n="plus" /> ساختن دستهٔ بعدی</button>
+            <button type="button" className="btn btn-primary" disabled={!canNext} onClick={() => app.startBatch()}><Icon n="plus" /> {canNext ? `ساختن دستهٔ بعدی از صف (${faN(Math.min(BATCH_MAX, app.queue.length))} واژه)` : "صف خالی است؛ اول واژه اضافه کن"}</button>
           ) : (
             <button type="button" className="btn" disabled><Icon n="lock" size={18} /> هنوز قفل است</button>
           )}

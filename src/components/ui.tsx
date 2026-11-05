@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { StatusKey } from "@/lib/vocabulary";
 
 const P: Record<string, ReactNode> = {
+  clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
   search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>,
   plus: <path d="M12 5v14M5 12h14" />,
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,

@@ -1,8 +1,10 @@
 // قواعد دامنهٔ واژه — قطعی، بدون وابستگی به رابط و قابل آزمون.
-// نکته: نگاشت پنج مرحله و قانون پیشروی بین آن‌ها هنوز تصمیم‌گیری‌نشده است؛
-// هیچ تابعی در این فایل مرحلهٔ واژه را جلو نمی‌برد.
+// قانون دسته: دستهٔ تازه با «ساخت دسته» از ابتدای صف (قدیمی‌ترین اول، حداکثر ۱۰۰) ساخته می‌شود
+// و فقط وقتی مجاز است که همهٔ اعضای دستهٔ قبلی مرحلهٔ ۵ را گذرانده باشند.
+// قانون مرحله‌ها در scheduler.ts (nextStage) است و فقط مرور زمان‌بندی‌شده آن را تغییر می‌دهد.
 
 import { DICTIONARY, TYPOS, entryById, slugify, type DictionaryEntry } from "./dictionary";
+import type { ReviewMemory } from "./scheduler";
 
 /** saved: در فهرست شخصی، بیرون از صف و دسته · queued: در صف · active: عضو دستهٔ فعال · completed: مرحلهٔ ۵ گذرانده */
 export type WordStatus = "saved" | "queued" | "active" | "completed";
@@ -19,11 +21,13 @@ export interface WordRecord {
   exampleEn: string;
   exampleFa: string;
   status: WordStatus;
-  /** فقط برای نمایش؛ قانون پیشروی تصمیم‌گیری‌نشده است. */
+  /** مرحلهٔ ۱ تا ۵ در دستهٔ فعال؛ فقط مرور زمان‌بندی‌شده آن را تغییر می‌دهد. */
   stage?: Stage | null;
   batchId?: string | null;
-  /** جای خالی برای FSRS؛ مطالعهٔ آزاد هرگز آن را تغییر نمی‌دهد. */
+  /** موعد مرور بعدی (کپی dueAt کارت FSRS)؛ مطالعهٔ آزاد هرگز آن را تغییر نمی‌دهد. */
   scheduledAt?: string | null;
+  /** زمان‌بندی FSRS جدا از مرحله‌های دسته و مطالعهٔ آزاد است. */
+  review?: ReviewMemory;
   addedAt: string;
   queuedAt?: string | null;
   source: WordSource;
@@ -140,6 +144,47 @@ export function canStartNextBatch(state: VocabState): boolean {
   const queueNotEmpty = state.words.some((w) => w.status === "queued");
   if (!queueNotEmpty) return false;
   return batch.length === 0 || batch.every(passedStageFive);
+}
+
+/**
+ * ساخت دستهٔ تازه: قدیمی‌ترین واژه‌های صف (حداکثر BATCH_MAX) وارد دسته می‌شوند،
+ * همه در مرحلهٔ ۱ و با اولین مرور در همان لحظه. اگر قفل باشد null برمی‌گردد.
+ */
+export function startBatch(state: VocabState, batchId: string, at = new Date().toISOString(), max = BATCH_MAX): { state: VocabState; count: number } | null {
+  if (!canStartNextBatch(state)) return null;
+  const picked = new Set(queueOf(state.words).slice(0, max).map((w) => w.id));
+  const words = state.words.map((w) => (picked.has(w.id)
+    ? { ...w, status: "active" as const, stage: 1 as Stage, batchId, scheduledAt: at, review: undefined, queuedAt: null }
+    : w));
+  return { state: { ...state, words, currentBatchId: batchId }, count: picked.size };
+}
+
+/** واژه‌های دستهٔ فعال که موعد مرورشان رسیده، به ترتیب موعد */
+export function dueWords(state: VocabState, now: number): WordRecord[] {
+  return batchOf(state)
+    .filter((w) => w.status === "active" && Date.parse(w.scheduledAt ?? w.review?.card.dueAt ?? w.addedAt) <= now)
+    .sort((a, b) => Date.parse(a.scheduledAt ?? a.addedAt) - Date.parse(b.scheduledAt ?? b.addedAt));
+}
+
+/** نزدیک‌ترین موعد آینده در دستهٔ فعال (برای پیام «مرور بعدی») */
+export function nextDueAt(state: VocabState, now: number): string | null {
+  let best: string | null = null;
+  for (const w of batchOf(state)) {
+    if (w.status !== "active") continue;
+    const at = w.scheduledAt ?? w.addedAt;
+    if (Date.parse(at) > now && (!best || Date.parse(at) < Date.parse(best))) best = at;
+  }
+  return best;
+}
+
+/** ثبت نتیجهٔ یک مرور زمان‌بندی‌شده: حافظهٔ FSRS، موعد بعدی و مرحلهٔ تازه */
+export function applyReview(state: VocabState, id: string, memory: ReviewMemory, change: { stage: Stage; completed: boolean }): VocabState {
+  return {
+    ...state,
+    words: state.words.map((w) => (w.id === id
+      ? { ...w, review: memory, stage: change.stage, status: change.completed ? "completed" as const : w.status, scheduledAt: change.completed ? null : memory.card.dueAt }
+      : w)),
+  };
 }
 
 /** مطالعهٔ آزاد: همهٔ واژه‌های شخصی — ذخیره، صف، دستهٔ فعال و تکمیل‌شده. */

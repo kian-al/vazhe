@@ -25,4 +25,18 @@ export const localSampleProvider: DictionaryProvider = {
   size: () => DICTIONARY.length,
 };
 
-export const dictionary: DictionaryProvider = localSampleProvider;
+let entryCount = 0;
+export const dictionary: DictionaryProvider = {
+ id: "open-server", label: "ویکی‌واژه · دادهٔ آزاد با ذکر منبع",
+ async search(query, signal) {
+  const r=await fetch(`/api/dictionary?q=${encodeURIComponent(query)}`,{signal});
+  if(!r.ok)throw new Error("Dictionary unavailable");
+  const data=await r.json();entryCount=data.count;return data;
+ },
+ async lookup(idOrWord,signal) {
+  const r=await fetch(`/api/dictionary?id=${encodeURIComponent(idOrWord)}`,{signal});
+  if(!r.ok)throw new Error("Dictionary unavailable");
+  const data=await r.json();entryCount=data.count;return data.entry;
+ },
+ size:()=>entryCount,
+};

@@ -1,0 +1,1 @@
+document.querySelector('form').addEventListener('submit',event=>{event.preventDefault();const query=document.querySelector('#term').value.trim();if(query)chrome.tabs.create({url:'https://vazhe.vercel.app/search?q='+encodeURIComponent(query)});});
