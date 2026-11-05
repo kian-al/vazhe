@@ -1,28 +1,31 @@
 "use client";
 import Link from "next/link";
-import { Icon } from "@/components/ui";
-import { En } from "@/components/ui";
-import { stg } from "@/components/words";
-import { BOOKS, fa } from "@/lib/dictionary";
-
-export default function Library() {
-  return (
-    <div className="flex flex-col gap-4">
-      <div><h2 className="h1">کتابخانه</h2><p className="small muted">واژه‌ها را فصل‌به‌فصل بیاور؛ تکراری‌ها خودکار رد می‌شوند.</p></div>
-      <div className="banner banner-warm" role="note"><Icon n="info" size={18} /><p className="small">فعلاً فقط آثار <b>مالکیت عمومی</b> به‌عنوان نمونه آمده‌اند و فهرست واژه‌ها گزیدهٔ دستی است؛ متن کتاب بازنشر نمی‌شود. <b>منبع نهایی کتاب‌ها تصمیم‌گیری‌نشده است.</b></p></div>
-      <div className="lib-grid">
-        {BOOKS.map((b, i) => (
-          <Link key={b.id} href={`/library/${b.id}`} className="card card-lift rise flex flex-col gap-2" style={stg(i)}>
-            <span className="flex items-start justify-between gap-2">
-              <span className="chip chip-accent icon-tile"><Icon n="book" /></span>
-              <span className="chip">{fa(b.chapters.length)} فصل</span>
-            </span>
-            <En as="p" style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.3 }}>{b.title}</En>
-            <p className="small muted"><En sans>{b.author}</En></p>
-            <span className="chip" style={{ alignSelf: "flex-start", whiteSpace: "normal", lineHeight: 1.5, padding: "4px 12px" }}><Icon n="check" size={14} /> {b.license}</span>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
+import { BookCover } from "@/components/BookCover";
+import { useApp } from "@/components/store";
+import { En, Icon, Skel, Sprout } from "@/components/ui";
+import { faN } from "@/lib/dictionary";
+import { useLibrary, type LibraryBook } from "@/lib/library";
+import { countFresh } from "@/lib/vocabulary";
+function BookCard({book}:{book:LibraryBook}) {
+ const app=useApp(); const entries=book.chapters.flatMap(c=>c.entries); const fresh=countFresh(app.words,entries).fresh;
+ return <section className="card library-card" aria-label={book.fa ?? book.title}>
+  <BookCover book={book} size={104}/><div className="library-card-content">
+   <h3 className="h3">{book.fa ?? book.title}</h3><En as="p" style={{fontSize:14,color:'var(--ink2)',lineHeight:1.4}}>{book.title}</En>
+   <p className="small muted" dir="ltr" style={{textAlign:'left'}}>{book.author}</p>
+   <p className="small">{faN(book.chapters.length)} {book.id==='w1100'?'هفته':book.collection==='series'?'درس':'فصل'} · {entries.length ? `${faN(entries.length)} واژهٔ استخراج‌شده`:'فهرست واژه‌ها آماده نیست'}</p>
+   <div className="library-actions"><Link className="btn btn-primary" href={`/library/${book.id}`}><Icon n="book" size={18}/> دیدن کتاب</Link>
+   {!!entries.length && <button className="btn btn-ghost" disabled={!app.ready||!fresh} onClick={()=>app.addMany(entries)}><Icon n="plus" size={18}/> {fresh ? `${faN(fresh)} واژهٔ تازه به صف`:'واژه‌ها در مجموعه‌اند'}</button>}</div>
+  </div></section>;
+}
+export default function LibraryPage() {
+ const {books,status}=useLibrary();
+ if(status==='loading') return <div aria-busy="true" aria-label="در حال بارگذاری کتابخانه" className="flex flex-col gap-3"><Skel h={160}/><Skel h={160}/></div>;
+ if(status==='error') return <div className="banner banner-warm" role="alert">کتابخانه از سرور دریافت نشد. لطفاً اتصال را بررسی و صفحه را دوباره باز کن.</div>;
+ return <div className="flex flex-col gap-4 library-page">
+  <div><h2 className="h1">کتابخانه</h2><p className="muted">یک کتاب انتخاب کن و واژه‌ها را فصل‌به‌فصل به صف بیاور.</p></div>
+  <div className="banner banner-info" role="note"><Icon n="info" size={18}/><p className="small">واژه‌های آثار کلاسیک خودکار از متن هر فصل استخراج شده‌اند. فهرست درس‌های کتاب‌های آموزشی تا فراهم‌شدن منبع مجاز خالی است.</p></div>
+  <h3 className="h2">سری‌های آموزش واژه</h3><div className="library-grid">{books.filter(b=>b.collection==='series').map(b=><BookCard key={b.id} book={b}/>)}</div>
+  <h3 className="h2">ادبیات کلاسیک</h3><div className="library-grid">{books.filter(b=>b.collection==='classics').map(b=><BookCard key={b.id} book={b}/>)}</div>
+  <div className="card flex items-center gap-3"><Sprout size={56}/><p className="small muted">واژه‌های تکراری دوباره به مجموعه‌ات اضافه نمی‌شوند.</p></div>
+ </div>;
 }

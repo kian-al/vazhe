@@ -30,7 +30,7 @@ function ManualAdd({ initial }: { initial: string }) {
   return (
     <form className="card flex flex-col gap-3" onSubmit={submit} noValidate aria-labelledby="manual-h">
       <h3 id="manual-h" className="h3">افزودن دستی</h3>
-      <p className="small muted">اگر واژه در واژه‌نامهٔ نمونه نیست، خودت اضافه‌اش کن. تکراری‌ها خودکار رد می‌شوند.</p>
+      <p className="small muted">اگر واژه در واژه‌نامه نیست، خودت اضافه‌اش کن. تکراری‌ها خودکار رد می‌شوند.</p>
       <div>
         <label htmlFor="m-en" className="small" style={{ fontWeight: 700 }}>واژهٔ انگلیسی</label>
         <input id="m-en" dir="ltr" lang="en" className="input no-icon mt-1" value={en} autoComplete="off" spellCheck={false} onChange={(e) => setEn(e.target.value)} aria-invalid={!!errs.en} aria-describedby={errs.en ? "m-en-err" : undefined} />
@@ -102,7 +102,7 @@ function Search() {
           <input ref={inputRef} id="sq" type="search" dir={inputDir(q)} className="input" value={q} autoComplete="off" spellCheck={false} autoFocus={desk}
             placeholder="مثلاً curious یا recieve" aria-describedby="sh" onChange={(e) => setQ(e.target.value)} onBlur={() => app.pushRecent(q)} />
         </div>
-        <p id="sh" className="small muted mt-1">غلط املایی هم اشکالی ندارد؛ پیشنهاد می‌دهیم. منبع فعلی: {dictionary.label} ({faN(dictionary.size())} واژه).</p>
+        <p id="sh" className="small muted mt-1">غلط املایی هم اشکالی ندارد؛ پیشنهاد می‌دهیم. منبع: {dictionary.label}{dictionary.size() ? ` · ${faN(dictionary.size())} مدخل` : ""}.</p>
       </form>
 
       {phase === "start" && (
