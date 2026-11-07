@@ -24,3 +24,14 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 ALTER TABLE dictionary_entries ADD COLUMN IF NOT EXISTS rank integer;
 CREATE INDEX IF NOT EXISTS dictionary_norm_trgm_idx ON dictionary_entries USING gin (norm gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS dictionary_fa_trgm_idx ON dictionary_entries USING gin (fa gin_trgm_ops);
+
+-- Account data is separate from anonymous browser data. Created only by a
+-- one-time migration; existing guest rows are never rewritten or deleted.
+CREATE TABLE IF NOT EXISTS account_vocab (
+ owner_id text PRIMARY KEY CHECK (length(owner_id) BETWEEN 1 AND 256),
+ payload jsonb NOT NULL DEFAULT '{"version":2,"words":[],"currentBatchId":null}',
+ revision integer NOT NULL DEFAULT 0 CHECK (revision >= 0),
+ updated_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE account_vocab ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON account_vocab FROM PUBLIC;
