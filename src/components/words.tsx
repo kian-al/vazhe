@@ -15,31 +15,31 @@ export function Marked({ text, word }: { text: string; word: string }) {
   return <>{parts.map((p, i) => (i % 2 ? <mark key={i} style={{ background: "var(--hl)", borderRadius: 6, padding: "0 4px" }}>{p}</mark> : <span key={i}>{p}</span>))}</>;
 }
 
-/** فهرست مجازی: فقط ردیف‌های دیدنی ساخته می‌شوند؛ با ۴ یا هزاران واژه یکسان کار می‌کند. */
+/** Progressive list: every rendered row stays available to keyboard and screen readers. */
 export function VList<T>({ items, rowH, render, label, keyOf }: { items: T[]; rowH: number; render: (it: T, i: number) => ReactNode; label: string; keyOf: (it: T) => string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [top, setTop] = useState(0);
-  const [h, setH] = useState(640);
+  const [visible, setVisible] = useState(40);
+  const listRef = useRef<HTMLDivElement>(null);
+  const nextFocus = useRef<number | null>(null);
+  const count = Math.min(visible, items.length);
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    setH(el.clientHeight);
-    const ro = new ResizeObserver(() => setH(el.clientHeight));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  const small = items.length <= 40;
-  const start = small ? 0 : Math.max(0, Math.floor(top / rowH) - 6);
-  const end = small ? items.length : Math.min(items.length, Math.ceil((top + h) / rowH) + 6);
+    if (nextFocus.current === null) return;
+    const row = listRef.current?.querySelector<HTMLElement>(`[data-list-index="${nextFocus.current}"]`);
+    (row?.querySelector<HTMLElement>('a,button:not([disabled]),input,select') ?? row)?.focus();
+    nextFocus.current = null;
+  }, [visible]);
   return (
-    <div ref={ref} className="scroll vlist" onScroll={small ? undefined : (e) => setTop(e.currentTarget.scrollTop)} role="list" aria-label={label}>
-      <div style={{ height: items.length * rowH, position: "relative" }}>
-        {items.slice(start, end).map((it, k) => (
-          <div role="listitem" key={keyOf(it)} className={small ? "rise" : undefined} style={{ ...(small ? stg(Math.min(k, 12)) : {}), position: "absolute", insetInline: 0, top: (start + k) * rowH, height: rowH }}>
-            {render(it, start + k)}
+    <div className="scroll vlist" role="region" aria-label={`${label}؛ فهرست قابل پیمایش`} tabIndex={0}>
+      <div ref={listRef} role="list" aria-label={label}>
+        {items.slice(0,count).map((it,i) => (
+          <div role="listitem" aria-posinset={i+1} aria-setsize={items.length} key={keyOf(it)} data-list-index={i} tabIndex={-1} style={{minHeight:rowH}}>
+            {render(it,i)}
           </div>
         ))}
       </div>
+      {count < items.length && <div className="list-more">
+        <p className="small muted" role="status">{faN(count)} از {faN(items.length)} مورد نمایش داده شده است.</p>
+        <button type="button" className="btn btn-ghost" onClick={() => { nextFocus.current = count; setVisible(n => n+40); }}>نمایش موارد بیشتر</button>
+      </div>}
     </div>
   );
 }

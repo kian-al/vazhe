@@ -15,16 +15,18 @@ export default function AccountPage() {
  const [password,setPassword]=useState(''); const [otp,setOtp]=useState('');
  const [token,setToken]=useState(''); const [user,setUser]=useState<User|null>(null);
  const [busy,setBusy]=useState(false); const [checking,setChecking]=useState(true);
+ const [sessionError,setSessionError]=useState(false);
  const [error,setError]=useState(''); const [notice,setNotice]=useState('');
 
  useEffect(()=>{
   let active=true;
   const url=new URL(window.location.href); const t=url.searchParams.get('token');
   if(t){setToken(t);setView('reset');url.searchParams.delete('token');window.history.replaceState(null,'',url.pathname+url.search+url.hash);}
-  auth.getSession().then(({data})=>{
+  auth.getSession().then(({data,error})=>{
    if(!active)return;
+   if(error && !t){setSessionError(true);return;}
    if(data?.user && !t){setUser({name:data.user.name,email:data.user.email});setView('signed-in');}
-  }).catch(()=>{}).finally(()=>{if(active)setChecking(false)});
+  }).catch(()=>{if(active && !t)setSessionError(true)}).finally(()=>{if(active)setChecking(false)});
   return()=>{active=false};
  },[]);
 
@@ -83,7 +85,7 @@ export default function AccountPage() {
    <div><h2 className="h1" aria-live="polite">{title}</h2><p className="muted">یک جای امن برای مسیر یادگیری‌ات.</p></div>
   </header>
   <div className="banner banner-warm account-beta" role="note"><Icon n="info" size={20}/><p className="small"><b>نسخهٔ آزمایشی حساب</b><br/>اتصال واژه‌ها به حساب هنوز کامل نشده است؛ داده‌های فعلی همچنان مهمان هستند و بین دستگاه‌ها همگام نمی‌شوند.</p></div>
-  {checking ? <section className="card account-card" aria-live="polite" aria-busy="true">در حال بررسی حساب…</section> : view==='signed-in' && user ? <>
+  {checking ? <section className="card account-card" aria-live="polite" aria-busy="true">در حال بررسی حساب…</section> : sessionError ? <section className="card account-card flex flex-col gap-3" role="alert"><h3 className="h3">وضعیت حساب مشخص نیست</h3><p className="small muted">ارتباط با سرویس حساب برقرار نشد. اتصال را بررسی کن و دوباره تلاش کن.</p><button type="button" className="btn btn-ghost" onClick={()=>window.location.reload()}>تلاش دوباره</button></section> : view==='signed-in' && user ? <>
    <section className="card account-card flex flex-col gap-3" aria-label="اطلاعات حساب">
     <div className="account-section-heading"><div><h3 className="h3">حساب تو</h3><p className="small muted">اطلاعات ورود</p></div><span className="chip chip-accent"><Icon n="check" size={16}/> وارد شده</span></div>
     <div className="account-profile"><span className="small muted">نام</span><b>{user.name}</b><span className="small muted">ایمیل</span><b className="en-sans account-email" dir="ltr">{user.email}</b></div>
@@ -101,7 +103,7 @@ export default function AccountPage() {
      <p className="small muted">{view==='signup'?'برای ساخت حساب، چند اطلاعات ساده کافی است.':view==='login'?'با ایمیل و رمز عبورت وارد شو.':view==='verify'?'کد ارسال‌شده به ایمیلت را وارد کن.':view==='forgot'?'اگر حسابت وجود داشته باشد، لینک بازیابی ارسال می‌شود.':'رمز تازه باید حداقل ۸ نویسه داشته باشد.'}</p></div>
     {view==='signup' && <label className="account-field"><span>نام</span><input className="input" autoComplete="name" value={name} onChange={e=>setName(e.target.value)} placeholder="مثلاً سارا" maxLength={100} required/></label>}
     {view!=='reset' && <label className="account-field"><span>ایمیل</span><input className="input en-sans" dir="ltr" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" maxLength={254} required/></label>}
-    {(view==='signup'||view==='login'||view==='reset') && <div className="account-field"><label htmlFor="account-password">{view==='reset'?'رمز عبور تازه':'رمز عبور'}</label><input id="account-password" className="input en-sans" dir="ltr" type="password" autoComplete={view==='login'?'current-password':'new-password'} value={password} onChange={e=>setPassword(e.target.value)} minLength={8} maxLength={128} aria-describedby={view==='signup'?'password-hint':undefined} required/>{view==='signup' && <span id="password-hint" className="small muted">حداقل ۸ نویسه انتخاب کن.</span>}</div>}
+    {(view==='signup'||view==='login'||view==='reset') && <div className="account-field"><label htmlFor="account-password">{view==='reset'?'رمز عبور تازه':'رمز عبور'}</label><input id="account-password" className="input en-sans" dir="ltr" type="password" autoComplete={view==='login'?'current-password':'new-password'} value={password} onChange={e=>setPassword(e.target.value)} minLength={view==='login'?undefined:8} maxLength={128} aria-describedby={view==='signup'?'password-hint':undefined} required/>{view==='signup' && <span id="password-hint" className="small muted">حداقل ۸ نویسه انتخاب کن.</span>}</div>}
     {view==='verify' && <label className="account-field"><span>کد تأیید</span><input className="input en-sans" dir="ltr" inputMode="numeric" autoComplete="one-time-code" value={otp} onChange={e=>setOtp(e.target.value)} maxLength={12} required/></label>}
     {error && <div className="banner banner-danger" role="alert"><Icon n="alert" size={18}/><p className="small">{error}</p></div>}
     {notice && <div className="banner banner-accent" role="status"><Icon n="info" size={18}/><p className="small">{notice}</p></div>}

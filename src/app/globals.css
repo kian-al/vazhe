@@ -402,3 +402,7 @@ textarea.input { padding: 12px 14px; min-height: 96px; resize: vertical; line-he
 .account-footnote { line-height:1.8; }
 .account-footnote svg { display:inline-block; vertical-align:-3px; margin-inline-end:6px; }
 @media(max-width:420px){ .account-card { padding:20px; } .account-intro { align-items:flex-start; } .account-intro svg { width:56px; height:56px; } }
+
+/* Progressive lists keep rows reachable by keyboard and allow text zoom. */
+.list-more { display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 8px 24px; }
+.vlist:focus-visible { outline:3px solid var(--accent); outline-offset:-3px; }
