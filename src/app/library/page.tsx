@@ -18,9 +18,9 @@ function BookCard({book}:{book:LibraryBook}) {
   </div></section>;
 }
 export default function LibraryPage() {
- const {books,status}=useLibrary();
+ const {books,status,retry}=useLibrary();
  if(status==='loading') return <div aria-busy="true" aria-label="در حال بارگذاری کتابخانه" className="flex flex-col gap-3"><Skel h={160}/><Skel h={160}/></div>;
- if(status==='error') return <div className="banner banner-warm" role="alert">کتابخانه از سرور دریافت نشد. لطفاً اتصال را بررسی و صفحه را دوباره باز کن.</div>;
+ if(status==='error') return <div className="banner banner-warm" role="alert"><Icon n="alert" size={20}/><div className="flex flex-col gap-2"><p>کتابخانه از سرور دریافت نشد. اتصال را بررسی کن و دوباره تلاش کن.</p><button type="button" className="btn btn-ghost" onClick={retry}><Icon n="refresh" size={18}/> تلاش دوباره</button></div></div>;
  return <div className="flex flex-col gap-4 library-page">
   <div><h2 className="h1">کتابخانه</h2><p className="muted">یک کتاب انتخاب کن و واژه‌ها را فصل‌به‌فصل به صف بیاور.</p></div>
   <div className="banner banner-info" role="note"><Icon n="info" size={18}/><p className="small">واژه‌های آثار کلاسیک خودکار از متن هر فصل استخراج شده‌اند. فهرست درس‌های کتاب‌های آموزشی تا فراهم‌شدن منبع مجاز خالی است.</p></div>

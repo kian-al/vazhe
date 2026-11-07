@@ -6,7 +6,7 @@ import { useApp, useIsDesktop } from "@/components/store";
 import { En, Icon, Skel, Sprout, inputDir } from "@/components/ui";
 import { PickHint, VList, WordDetail, WordRow } from "@/components/words";
 import { dictionary } from "@/lib/dictionaryProvider";
-import { DICTIONARY, faN, slugify, type DictionaryEntry } from "@/lib/dictionary";
+import { DICTIONARY, slugify, type DictionaryEntry } from "@/lib/dictionary";
 import { statusKey, type SearchOutcome } from "@/lib/vocabulary";
 
 type Phase = "start" | "loading" | "error" | "done";
@@ -61,6 +61,15 @@ function Search() {
 
   useEffect(() => {
     const t = q.trim();
+    // Keep reload/back links truthful, including clearing a previous query.
+    // A selected result is preserved when the query itself did not change.
+    const params = new URLSearchParams(sp.toString());
+    if ((params.get("q") ?? "") !== t) {
+      if (t) params.set("q", t); else params.delete("q");
+      params.delete("w");
+      const suffix = params.toString();
+      router.replace(suffix ? `${path}?${suffix}` : path, { scroll: false });
+    }
     if (!t) { setPhase("start"); setOut({ results: [] }); return; }
     setPhase("loading");
     const ctl = new AbortController();
@@ -68,10 +77,6 @@ function Search() {
       dictionary.search(t, ctl.signal)
         .then((r) => { if (!ctl.signal.aborted) { setOut(r); setPhase("done"); } })
         .catch(() => { if (!ctl.signal.aborted) setPhase("error"); });
-      const params = new URLSearchParams(sp.toString());
-      params.set("q", t);
-      params.delete("w");
-      router.replace(`${path}?${params.toString()}`, { scroll: false });
     }, 180);
     return () => { clearTimeout(timer); ctl.abort(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,9 +105,8 @@ function Search() {
         <div className="input-wrap mt-1">
           <Icon n="search" size={20} />
           <input ref={inputRef} id="sq" type="search" dir={inputDir(q)} className="input" value={q} autoComplete="off" spellCheck={false} autoFocus={desk}
-            placeholder="مثلاً curious یا recieve" aria-describedby="sh" onChange={(e) => setQ(e.target.value)} onBlur={() => app.pushRecent(q)} />
+            placeholder="مثلاً curious یا recieve" onChange={(e) => setQ(e.target.value)} onBlur={() => app.pushRecent(q)} />
         </div>
-        <p id="sh" className="small muted mt-1">غلط املایی هم اشکالی ندارد؛ پیشنهاد می‌دهیم. منبع: {dictionary.label}{dictionary.size() ? ` · ${faN(dictionary.size())} مدخل` : ""}.</p>
       </form>
 
       {phase === "start" && (

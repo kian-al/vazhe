@@ -26,6 +26,7 @@ function tabOf(path: string): string {
 
 function titleOf(path: string): string {
   if (path === "/") return "واژه";
+  if (path.startsWith("/account")) return "حساب کاربری";
   if (path.startsWith("/words")) return "واژه‌های من";
   if (path.startsWith("/word/")) return "جزئیات واژه";
   if (path.startsWith("/search")) return "جست‌وجو";
@@ -84,10 +85,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               {t.id === "queue" && queue.length > 0 && <span className="sr-only">{`${queue.length} واژه در صف`}</span>}
             </Link>
           ))}
+          <Link href="/account" className="tab" aria-current={path.startsWith("/account") ? "page" : undefined}><Icon n="user" /> حساب کاربری</Link>
           <Link href="/batch" className="tab" aria-current={path.startsWith("/batch") ? "page" : undefined}><Icon n="leaf" /> دستهٔ فعال</Link>
           <div style={{ flex: 1, minHeight: 16 }} />
-          <Link href="/extension" className="tab"><Icon n="puzzle" /> <span style={{ flex: 1 }}>پیش‌نمایش افزونه</span></Link>
-          <div className="sidebar-note"><b>هر واژه، یک قدم نزدیک‌تر.</b><p className="small muted">با ریتم خودت یاد بگیر؛ فشاری در کار نیست.</p><Link href="/about" className="link small">داده‌ها و حریم خصوصی</Link></div>
+          <div className="sidebar-note"><Link href="/about" className="link small">داده‌ها و حریم خصوصی</Link></div>
         </nav>
       )}
 
@@ -100,6 +101,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link href="/" aria-label="واژه، صفحهٔ مرور" style={{ display: "inline-flex", minWidth: 44, minHeight: 44, alignItems: "center" }}><Sprout size={40} /></Link>
             )}
             <h1>{titleOf(path)}</h1>
+            <Link href="/account" className="btn btn-ghost icon-btn" aria-label="حساب کاربری"><Icon n="user" /></Link>
             <Link href="/queue" className="btn btn-ghost icon-btn" aria-label={`صف، ${queue.length} واژه`} style={{ position: "relative" }}>
               <Icon n="layers" />
               {queue.length > 0 && <span style={{ position: "absolute", top: -6, insetInlineStart: -6 }}>{badge}</span>}
