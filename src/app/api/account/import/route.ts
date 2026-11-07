@@ -1,3 +1,5 @@
+import { readBoundedJson, BodyTooLarge } from '@/server/request-body';
+import { logEvent } from '@/server/events';
 import { NextResponse } from 'next/server';
 import { verifiedAccount } from '@/server/auth';
 import { database } from '@/server/db';
@@ -24,17 +26,17 @@ export async function GET(){
  }catch{return NextResponse.json({error:'database_unavailable'},{status:503,headers});}
 }
 export async function POST(req:Request){
- if(!sameOrigin(req))return NextResponse.json({error:'origin_denied'},{status:403,headers});
+ if(!sameOrigin(req)){logEvent('guest_import','denied',403);return NextResponse.json({error:'origin_denied'},{status:403,headers});}
  if(!req.headers.get('content-type')?.startsWith('application/json'))return NextResponse.json({error:'json_required'},{status:415,headers});
  const {account,owner,error}=await access();if(error)return error;
  const sql=database();if(!sql)return NextResponse.json({error:'database_unavailable'},{status:503,headers});
  try{
-  const raw=await req.text();if(Buffer.byteLength(raw)>2048)return NextResponse.json({error:'payload_too_large'},{status:413,headers});
-  let b;try{b=JSON.parse(raw)}catch{return NextResponse.json({error:'invalid_json'},{status:400,headers});}
+  let b: any;try{b=await readBoundedJson(req,2048)}catch(e){return NextResponse.json({error:e instanceof BodyTooLarge?'payload_too_large':'invalid_json'},{status:e instanceof BodyTooLarge?413:400,headers});}
+  if(!b || typeof b!=='object' || Array.isArray(b))return NextResponse.json({error:'invalid_json'},{status:400,headers});
   if(b.identity!==account!.identity)return NextResponse.json({error:'identity_changed'},{status:409,headers});
   if(!Number.isInteger(b.guestRevision)||b.guestRevision<0||!Number.isInteger(b.accountRevision)||b.accountRevision<0)return NextResponse.json({error:'invalid_revision'},{status:400,headers});
   const rows=await sql.query(COPY_GUEST_TO_EMPTY_ACCOUNT,[account!.id,owner,b.guestRevision,b.accountRevision]);
-  if(!rows.length)return NextResponse.json({error:'import_conflict'},{status:409,headers});
-  return NextResponse.json({revision:rows[0].revision},{headers});
+  if(!rows.length){logEvent('guest_import','conflict',409);return NextResponse.json({error:'import_conflict'},{status:409,headers});}
+  logEvent('guest_import','success',200);return NextResponse.json({revision:rows[0].revision},{headers});
  }catch{return NextResponse.json({error:'database_unavailable'},{status:503,headers});}
 }
