@@ -22,3 +22,11 @@ test('operational event has only fixed, non-sensitive fields', () => {
  assert.equal(record.event,'guest_import');assert.equal(record.status,409);
  assert.ok(Number.isFinite(Date.parse(record.at)));
 });
+
+test('JSON content type is exact and revisions cannot lose integer precision', async () => {
+ const { isJsonContentType, isRevision } = await import('../src/server/request-validation');
+ for (const type of ['application/json','application/json; charset=utf-8',' Application/JSON ']) assert.equal(isJsonContentType(type),true);
+ for (const type of [null,'','application/jsonp','application/json-evil','text/plain','application/problem+json']) assert.equal(isJsonContentType(type),false);
+ for (const n of [0,1,Number.MAX_SAFE_INTEGER]) assert.equal(isRevision(n),true);
+ for (const n of [-1,1.5,Number.MAX_SAFE_INTEGER+1,NaN,Infinity,'1',null]) assert.equal(isRevision(n),false);
+});

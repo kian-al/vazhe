@@ -1,3 +1,4 @@
+import { isJsonContentType, isRevision } from '@/server/request-validation';
 import { readBoundedJson, BodyTooLarge } from '@/server/request-body';
 import { logEvent } from '@/server/events';
 import { NextResponse } from 'next/server';
@@ -20,13 +21,13 @@ export async function GET(){
 }
 export async function PUT(req:Request){
  if(!sameOrigin(req)){logEvent('state_write','denied',403);return NextResponse.json({error:'origin_denied'},{status:403,headers});}
- if(!req.headers.get('content-type')?.startsWith('application/json'))return NextResponse.json({error:'json_required'},{status:415,headers});
+ if(!isJsonContentType(req.headers.get('content-type')))return NextResponse.json({error:'json_required'},{status:415,headers});
  const sql=database();if(!sql)return NextResponse.json({error:'database_not_configured'},{status:503,headers});
  const owner=await guest();if(!owner)return NextResponse.json({error:'session_required'},{status:401,headers});
  try{
   let b: any;try{b=await readBoundedJson(req,4_000_000)}catch(e){return NextResponse.json({error:e instanceof BodyTooLarge?'payload_too_large':'invalid_json'},{status:e instanceof BodyTooLarge?413:400,headers});}
   if(!b || typeof b!=='object' || Array.isArray(b))return NextResponse.json({error:'invalid_json'},{status:400,headers});
-  if(!validState(b.state)||!Number.isInteger(b.revision)||b.revision<0)return NextResponse.json({error:'invalid_state'},{status:400,headers});
+  if(!validState(b.state)||!isRevision(b.revision))return NextResponse.json({error:'invalid_state'},{status:400,headers});
   const rows=await sql.query(WRITE_GUEST,[JSON.stringify(b.state),owner,b.revision]);
   if(!rows.length){logEvent('state_write','conflict',409);return NextResponse.json({error:'revision_conflict'},{status:409,headers});}
   return NextResponse.json({revision:rows[0].revision},{headers});

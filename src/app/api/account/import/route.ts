@@ -1,3 +1,4 @@
+import { isJsonContentType, isRevision } from '@/server/request-validation';
 import { readBoundedJson, BodyTooLarge } from '@/server/request-body';
 import { logEvent } from '@/server/events';
 import { NextResponse } from 'next/server';
@@ -27,14 +28,14 @@ export async function GET(){
 }
 export async function POST(req:Request){
  if(!sameOrigin(req)){logEvent('guest_import','denied',403);return NextResponse.json({error:'origin_denied'},{status:403,headers});}
- if(!req.headers.get('content-type')?.startsWith('application/json'))return NextResponse.json({error:'json_required'},{status:415,headers});
+ if(!isJsonContentType(req.headers.get('content-type')))return NextResponse.json({error:'json_required'},{status:415,headers});
  const {account,owner,error}=await access();if(error)return error;
  const sql=database();if(!sql)return NextResponse.json({error:'database_unavailable'},{status:503,headers});
  try{
   let b: any;try{b=await readBoundedJson(req,2048)}catch(e){return NextResponse.json({error:e instanceof BodyTooLarge?'payload_too_large':'invalid_json'},{status:e instanceof BodyTooLarge?413:400,headers});}
   if(!b || typeof b!=='object' || Array.isArray(b))return NextResponse.json({error:'invalid_json'},{status:400,headers});
   if(b.identity!==account!.identity)return NextResponse.json({error:'identity_changed'},{status:409,headers});
-  if(!Number.isInteger(b.guestRevision)||b.guestRevision<0||!Number.isInteger(b.accountRevision)||b.accountRevision<0)return NextResponse.json({error:'invalid_revision'},{status:400,headers});
+  if(!isRevision(b.guestRevision)||!isRevision(b.accountRevision))return NextResponse.json({error:'invalid_revision'},{status:400,headers});
   const rows=await sql.query(COPY_GUEST_TO_EMPTY_ACCOUNT,[account!.id,owner,b.guestRevision,b.accountRevision]);
   if(!rows.length){logEvent('guest_import','conflict',409);return NextResponse.json({error:'import_conflict'},{status:409,headers});}
   logEvent('guest_import','success',200);return NextResponse.json({revision:rows[0].revision},{headers});
