@@ -32,6 +32,10 @@ The JSON write endpoints use a bounded streaming reader, and the app sends basic
 
 `listOutboxes` enumerates a single principal's per-writer records without deleting them. `uploadAccountOutbox` and `accountTransport` are opt-in primitives only: the caller supplies an account principal, checks the server head, sends the expected identity and base revision, treats uncertain outcomes as uncertain, and leaves the outbox intact even after an acknowledgement. The API's successful PUT returns server-validated identity and revision. Lost-response and concurrent-edit cases are simulated in unit tests. The in-memory lock is only within one JavaScript runtime, not a cross-tab lock; localStorage enumeration is not an atomic snapshot. Server-side principal checks and revision CAS remain mandatory. No app store or UI uses these modules yet; choosing a writer ID, lifecycle/acknowledgement and safe cleanup, cross-tab coordination, guest import, backup/recovery UX, and real provider/browser tests are release blockers. No local record is automatically discarded, migrated or uploaded by this change.
 
+### Handler-level security regression tests
+
+`tests/account-routes.test.ts` runs the actual account/import handler logic against local PGlite with injected synthetic identities, guest ownership and origin checks. It exercises account isolation, client-supplied owner, identity switch, stale revision, unavailable/unverified session, malformed and oversized requests, explicit copy into a pristine account, and retention of the source guest. The test does not prove real Neon Auth, production PostgreSQL roles, browser concurrency or email delivery. A local HTTP smoke with auth/database unset confirms only failure-mode status codes. The web store remains guest-only and no account sync has been activated.
+
 ## Before release
 
 1. A separate Neon test branch has Managed Better Auth enabled with shared email, OTP verification required and session revocation on password reset. Configure trusted origins and a strong server-only cookie secret for each environment; provision production only after the flow is tested. Keep the free plan.
