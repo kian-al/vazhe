@@ -22,7 +22,7 @@ The migration adds `account_vocab` separately from existing data. Parameterized 
 
 ## Security and UX hardening in this draft
 
-The JSON write endpoints use a bounded streaming reader, and the app sends basic framing, MIME-sniffing and referrer headers. Minimal allowlisted operational events are emitted to server logs without request bodies or credentials. These are **not** a durable or complete audit trail, and rate limiting, CSP, production role verification, real email, account-scoped caching and account sync remain incomplete. The account page shows a recoverable error if session discovery fails. See [ENGINEERING-SECURITY-AUDIT.md](ENGINEERING-SECURITY-AUDIT.md) for scope and remaining risks.
+The JSON write endpoints use a bounded streaming reader, and the app sends basic framing, MIME-sniffing and referrer headers. Minimal allowlisted operational events are emitted to server logs without request bodies or credentials. These are **not** a durable or complete audit trail, and rate limiting, CSP, production role verification, real email, account-scoped caching and account sync remain incomplete. The account page shows a recoverable error if session discovery fails. OTP resend now calls the email-verification OTP endpoint; only a mocked browser check has passed, so real delivery is still unverified. Vocabulary mutations are blocked while the initial guest state loads, preventing that late response from overwriting an early interaction; this is not identity-scoped sync. See [ENGINEERING-SECURITY-AUDIT.md](ENGINEERING-SECURITY-AUDIT.md) for scope and remaining risks.
 
 ## Before release
 
@@ -34,3 +34,7 @@ The JSON write endpoints use a bounded streaming reader, and the app sends basic
 6. Do not add test commands to CI or the production build; run tests separately.
 
 Reference: https://neon.com/docs/auth/production-checklist
+
+## Repeatable local browser smoke test
+
+With an isolated local app already running, manually run `VAZHE_QA_URL=http://127.0.0.1:3194 node scripts/qa/account-storage-ui.mjs` (set `CHROMIUM_PATH` if Playwright cannot find Chromium). It only permits localhost and intercepts authentication, dictionary and state requests; it never sends a real email. Optional `VAZHE_QA_SCREENSHOT_DIR` writes screenshots. This does not replace tests with the isolated real provider, multiple devices, or a screen reader, and it is not a CI/build step.
