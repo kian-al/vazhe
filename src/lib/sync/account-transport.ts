@@ -7,7 +7,7 @@ function headShape(value: unknown): value is AccountHead {
   return typeof v.identity === 'string' && IDENTITY.test(v.identity) && Number.isSafeInteger(v.revision) && v.revision >= 0;
 }
 /** Opt-in adapter only; never includes account IDs or credentials supplied by the UI. */
-export function accountTransport(fetcher: typeof fetch = fetch): AccountTransport {
+export function accountTransport(fetcher: typeof fetch = (...args) => globalThis.fetch(...args)): AccountTransport {
   return {
     async head() {
       const response = await fetcher('/api/account/state', {cache:'no-store', credentials:'same-origin'});

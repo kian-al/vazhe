@@ -7,7 +7,7 @@ import { uploadAccountOutbox, type AccountTransport } from '../src/lib/sync/uplo
 
 function storage() {
  const map = new Map<string,string>();
- return { map, get length(){return map.size}, key(i:number){return [...map.keys()][i]??null}, getItem(k:string){return map.get(k)??null}, setItem(k:string,v:string){map.set(k,v)} };
+ return { map, get length(){return map.size}, key(i:number){return [...map.keys()][i]??null}, getItem(k:string){return map.get(k)??null}, setItem(k:string,v:string){map.set(k,v)},removeItem(k:string){map.delete(k)} };
 }
 const p: Principal={kind:'account',identity:'a'.repeat(64)}, other: Principal={kind:'account',identity:'b'.repeat(64)};
 const w1='1'.repeat(32),w2='2'.repeat(32);

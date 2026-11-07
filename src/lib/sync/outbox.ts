@@ -50,7 +50,7 @@ export function recoveryDecision(record: OutboxRecord, current: Principal, serve
   return 'candidate';
 }
 
-export type EnumerableStorage = StorageLike & Pick<Storage, 'length' | 'key'>;
+export type EnumerableStorage = StorageLike & Pick<Storage, 'length' | 'key' | 'removeItem'>;
 export type RecoveryListing = { records: OutboxRecord[]; invalid: number };
 /** Read only the requested principal's records, including writers from closed tabs.
  * Never delete or upload them. Storage access failures deliberately propagate. */
