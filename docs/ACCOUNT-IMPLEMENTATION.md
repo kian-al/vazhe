@@ -36,6 +36,12 @@ The JSON write endpoints use a bounded streaming reader, and the app sends basic
 
 `tests/account-routes.test.ts` runs the actual account/import handler logic against local PGlite with injected synthetic identities, guest ownership and origin checks. It exercises account isolation, client-supplied owner, identity switch, stale revision, unavailable/unverified session, malformed and oversized requests, explicit copy into a pristine account, and retention of the source guest. The test does not prove real Neon Auth, production PostgreSQL roles, browser concurrency or email delivery. A local HTTP smoke with auth/database unset confirms only failure-mode status codes. The web store remains guest-only and no account sync has been activated.
 
+### Experimental account client (not wired)
+
+`ExperimentalAccountClient` connects the account transport to an independent per-instance random writer outbox. It validates the account snapshot, fails closed when there are abandoned records, durably stores each edit before sending, holds further edits during the request, and deletes only the exact matching record owned by that instance after confirmed server acknowledgement. On conflict, identity change, lost response, close during write, or cleanup uncertainty it blocks and retains/reports recoverable data. Local guest keys are not read, migrated or modified. The no-automatic-deletion description above applies to `uploadAccountOutbox` itself, not this controller's explicitly submitted successful write.
+
+The app store and UI do **not** use this client. Session change detection and transitions across tabs, a user-facing recovery/backup/cleanup workflow, guest migration, real-provider and real multi-device tests are still required. The key-removal check relies on exclusive ownership of a fresh writer key; localStorage is not a transactional or security boundary. Do not enable this implementation for release until those controls have been integrated and tested. The PGlite end-to-end tests use injected synthetic identities; the separate Chromium two-tab test uses a mocked API, not Neon.
+
 ## Before release
 
 1. A separate Neon test branch has Managed Better Auth enabled with shared email, OTP verification required and session revocation on password reset. Configure trusted origins and a strong server-only cookie secret for each environment; provision production only after the flow is tested. Keep the free plan.
