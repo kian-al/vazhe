@@ -6,7 +6,7 @@ import { useApp, useIsDesktop } from "@/components/store";
 import { En, Icon, Skel, Sprout, inputDir } from "@/components/ui";
 import { PickHint, VList, WordDetail, WordRow } from "@/components/words";
 import { dictionary } from "@/lib/dictionaryProvider";
-import { DICTIONARY, faN, slugify, type DictionaryEntry } from "@/lib/dictionary";
+import { DICTIONARY, slugify, type DictionaryEntry } from "@/lib/dictionary";
 import { statusKey, type SearchOutcome } from "@/lib/vocabulary";
 
 type Phase = "start" | "loading" | "error" | "done";
@@ -105,9 +105,8 @@ function Search() {
         <div className="input-wrap mt-1">
           <Icon n="search" size={20} />
           <input ref={inputRef} id="sq" type="search" dir={inputDir(q)} className="input" value={q} autoComplete="off" spellCheck={false} autoFocus={desk}
-            placeholder="مثلاً curious یا recieve" aria-describedby="sh" onChange={(e) => setQ(e.target.value)} onBlur={() => app.pushRecent(q)} />
+            placeholder="مثلاً curious یا recieve" onChange={(e) => setQ(e.target.value)} onBlur={() => app.pushRecent(q)} />
         </div>
-        <p id="sh" className="small muted mt-1">غلط املایی هم اشکالی ندارد؛ پیشنهاد می‌دهیم. منبع: {dictionary.label}{dictionary.size() ? ` · ${faN(dictionary.size())} مدخل` : ""}.</p>
       </form>
 
       {phase === "start" && (

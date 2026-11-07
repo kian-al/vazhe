@@ -70,7 +70,7 @@ export default function AccountPage() {
  async function resend(){
   await perform(async()=>{
    if(!email.trim()){setError('اول ایمیلت را وارد کن.');return;}
-   const result=await auth.sendVerificationEmail({email:email.trim()});
+   const result=await auth.emailOtp.sendVerificationOtp({email:email.trim(),type:'email-verification'});
    if(result.error){setError('ارسال کد انجام نشد؛ کمی بعد دوباره تلاش کن.');return;}
    setNotice('اگر حساب تأییدنشده‌ای با این ایمیل وجود داشته باشد، کد ارسال می‌شود.');
   });
@@ -100,10 +100,10 @@ export default function AccountPage() {
    </div>}
    <form className="card account-card flex flex-col gap-3" onSubmit={submit}>
     <div><h3 className="h3">{view==='signup'?'شروع با ایمیل':view==='login'?'ورود به حساب':view==='verify'?'کد تأیید':view==='forgot'?'ایمیل حساب': 'رمز عبور جدید'}</h3>
-     <p className="small muted">{view==='signup'?'برای ساخت حساب، چند اطلاعات ساده کافی است.':view==='login'?'با ایمیل و رمز عبورت وارد شو.':view==='verify'?'کد ارسال‌شده به ایمیلت را وارد کن.':view==='forgot'?'اگر حسابت وجود داشته باشد، لینک بازیابی ارسال می‌شود.':'رمز تازه باید حداقل ۸ نویسه داشته باشد.'}</p></div>
+     <p id="account-form-intro" className="small muted">{view==='signup'?'برای ساخت حساب، رمز باید حداقل ۸ نویسه داشته باشد.':view==='login'?'با ایمیل و رمز عبورت وارد شو.':view==='verify'?'کد ارسال‌شده به ایمیلت را وارد کن.':view==='forgot'?'اگر حسابت وجود داشته باشد، لینک بازیابی ارسال می‌شود.':'رمز تازه باید حداقل ۸ نویسه داشته باشد.'}</p></div>
     {view==='signup' && <label className="account-field"><span>نام</span><input className="input" autoComplete="name" value={name} onChange={e=>setName(e.target.value)} placeholder="مثلاً سارا" maxLength={100} required/></label>}
     {view!=='reset' && <label className="account-field"><span>ایمیل</span><input className="input en-sans" dir="ltr" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" maxLength={254} required/></label>}
-    {(view==='signup'||view==='login'||view==='reset') && <div className="account-field"><label htmlFor="account-password">{view==='reset'?'رمز عبور تازه':'رمز عبور'}</label><input id="account-password" className="input en-sans" dir="ltr" type="password" autoComplete={view==='login'?'current-password':'new-password'} value={password} onChange={e=>setPassword(e.target.value)} minLength={view==='login'?undefined:8} maxLength={128} aria-describedby={view==='signup'?'password-hint':undefined} required/>{view==='signup' && <span id="password-hint" className="small muted">حداقل ۸ نویسه انتخاب کن.</span>}</div>}
+    {(view==='signup'||view==='login'||view==='reset') && <div className="account-field"><label htmlFor="account-password">{view==='reset'?'رمز عبور تازه':'رمز عبور'}</label><input id="account-password" className="input en-sans" dir="ltr" type="password" autoComplete={view==='login'?'current-password':'new-password'} value={password} onChange={e=>setPassword(e.target.value)} minLength={view==='login'?undefined:8} maxLength={128} aria-describedby={view==='signup'||view==='reset'?'account-form-intro':undefined} required/></div>}
     {view==='verify' && <label className="account-field"><span>کد تأیید</span><input className="input en-sans" dir="ltr" inputMode="numeric" autoComplete="one-time-code" value={otp} onChange={e=>setOtp(e.target.value)} maxLength={12} required/></label>}
     {error && <div className="banner banner-danger" role="alert"><Icon n="alert" size={18}/><p className="small">{error}</p></div>}
     {notice && <div className="banner banner-accent" role="status"><Icon n="info" size={18}/><p className="small">{notice}</p></div>}

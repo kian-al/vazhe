@@ -186,7 +186,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const notify = useCallback((text: string, kind: Toast["kind"] = "ok") => setToast({ id: Date.now() + Math.random(), text, kind }), []);
 
+  // Do not let early interaction overwrite the snapshot being loaded.
+  const ensureReady = useCallback(() => {
+    if (ready) return true;
+    notify("هنوز در حال دریافت واژه‌ها هستیم؛ کمی بعد دوباره تلاش کن.", "warn");
+    return false;
+  }, [ready, notify]);
+
   const add = useCallback((entry: DictionaryEntry, source: WordSource = "dictionary") => {
+    if (!ensureReady()) return false;
     const r = addToQueue(ref.current, entry, source);
     if (!r.added) {
       setDupe(r.existing?.id ?? null);
@@ -198,9 +206,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setBump((b) => b + 1);
     notify(`«${entry.en}» وارد صف شد.`);
     return true;
-  }, [commit, notify]);
+  }, [commit, notify, ensureReady]);
 
   const addMany = useCallback((entries: DictionaryEntry[]) => {
+    if (!ensureReady()) return { added: 0, duplicates: 0 };
     const r = addManyToQueue(ref.current, entries);
     if (r.added) { commit(r.state); setBump((b) => b + 1); }
     notify(
@@ -208,9 +217,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       r.added ? "ok" : "warn",
     );
     return { added: r.added, duplicates: r.duplicates };
-  }, [commit, notify]);
+  }, [commit, notify, ensureReady]);
 
   const reviewWord = useCallback(async (id: string, rating: FreeRating) => {
+    if (!ensureReady()) throw new Error("state_loading");
     const original = ref.current.words.find(w => w.id === id);
     if (!original) throw new Error("word_not_found");
     if (original.status !== "active") throw new Error("not_in_batch");
@@ -225,23 +235,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       else notify(`«${original.en}» مرحلهٔ ۵ را گذراند و تکمیل شد.`);
     }
     return change;
-  }, [commit, notify]);
+  }, [commit, notify, ensureReady]);
   const startBatch = useCallback(() => {
+    if (!ensureReady()) return 0;
     const r = startBatchRule(ref.current, `batch-${Date.now().toString(36)}`);
     if (!r) { notify("فعلاً نمی‌شود دستهٔ تازه ساخت: یا صف خالی است یا دستهٔ فعلی کامل نشده.", "warn"); return 0; }
     commit(r.state);
     setBump((b) => b + 1);
     notify(`دستهٔ تازه با ${r.count.toLocaleString("fa-IR")} واژه ساخته شد؛ اولین مرورها آماده‌اند.`);
     return r.count;
-  }, [commit, notify]);
-  const unqueue = useCallback((id: string) => { commit(removeFromQueue(ref.current, id)); notify("از صف برداشته شد؛ در فهرست شما می‌ماند."); }, [commit, notify]);
-  const requeueWord = useCallback((id: string) => { commit(requeue(ref.current, id)); setBump((b) => b + 1); notify("دوباره به انتهای صف رفت."); }, [commit, notify]);
-  const remove = useCallback((id: string) => { commit(deleteWord(ref.current, id)); notify("واژه از فهرست شما حذف شد."); }, [commit, notify]);
-  const clearSamples = useCallback(() => { commit(removeSamples(ref.current)); notify("واژه‌های نمونه حذف شدند؛ واژه‌های خودت سر جایشان‌اند."); }, [commit, notify]);
+  }, [commit, notify, ensureReady]);
+  const unqueue = useCallback((id: string) => { if (!ensureReady()) return; commit(removeFromQueue(ref.current, id)); notify("از صف برداشته شد؛ در فهرست شما می‌ماند."); }, [commit, notify, ensureReady]);
+  const requeueWord = useCallback((id: string) => { if (!ensureReady()) return; commit(requeue(ref.current, id)); setBump((b) => b + 1); notify("دوباره به انتهای صف رفت."); }, [commit, notify, ensureReady]);
+  const remove = useCallback((id: string) => { if (!ensureReady()) return; commit(deleteWord(ref.current, id)); notify("واژه از فهرست شما حذف شد."); }, [commit, notify, ensureReady]);
+  const clearSamples = useCallback(() => { if (!ensureReady()) return; commit(removeSamples(ref.current)); notify("واژه‌های نمونه حذف شدند؛ واژه‌های خودت سر جایشان‌اند."); }, [commit, notify, ensureReady]);
   const restoreSamples = useCallback(() => {
+    if (!ensureReady()) return;
     commit(restoreSampleWords(ref.current));
     notify("واژه‌های نمونه برگشتند.");
-  }, [commit, notify]);
+  }, [commit, notify, ensureReady]);
   const pushRecent = useCallback((q: string) => {
     const t = q.trim();
     if (!t) return;
