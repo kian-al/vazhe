@@ -49,3 +49,27 @@ export function recoveryDecision(record: OutboxRecord, current: Principal, serve
   if (!Number.isSafeInteger(serverRevision) || serverRevision < 0 || record.baseRevision !== serverRevision) return 'conflict';
   return 'candidate';
 }
+
+export type EnumerableStorage = StorageLike & Pick<Storage, 'length' | 'key'>;
+export type RecoveryListing = { records: OutboxRecord[]; invalid: number };
+/** Read only the requested principal's records, including writers from closed tabs.
+ * Never delete or upload them. Storage access failures deliberately propagate. */
+export function listOutboxes(storage: EnumerableStorage, principal: Principal): RecoveryListing {
+  if (!validPrincipal(principal)) throw new Error('invalid_outbox_identity');
+  const prefix = `${PREFIX}.${principal.kind}.${principal.identity}.`;
+  // Snapshot keys first: a storage event in another tab can change the list.
+  const keys: string[] = [];
+  for (let i = 0; i < storage.length; i++) {
+    const key = storage.key(i);
+    if (key?.startsWith(prefix)) keys.push(key);
+  }
+  const listing: RecoveryListing = { records: [], invalid: 0 };
+  for (const key of keys) {
+    const writer = key.slice(prefix.length);
+    if (!validWriter(writer)) { listing.invalid++; continue; }
+    const result = readOutbox(storage, principal, writer);
+    if (result.kind === 'found') listing.records.push(result.record);
+    else if (result.kind === 'invalid') listing.invalid++;
+  }
+  return listing;
+}

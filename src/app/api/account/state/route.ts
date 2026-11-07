@@ -36,6 +36,6 @@ export async function PUT(req:Request){
   if(!validState(body.state)||!isRevision(body.revision))return NextResponse.json({error:'invalid_state'},{status:400,headers});
   const rows=await sql.query(WRITE_ACCOUNT,[JSON.stringify(body.state),account!.id,body.revision]);
   if(!rows.length){logEvent('account_write','conflict',409);return NextResponse.json({error:'revision_conflict'},{status:409,headers});}
-  return NextResponse.json({revision:rows[0].revision},{headers});
+  return NextResponse.json({identity:account!.identity,revision:rows[0].revision},{headers});
  }catch{return NextResponse.json({error:'database_unavailable'},{status:503,headers});}
 }
