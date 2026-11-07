@@ -18,13 +18,13 @@ A single verified user identity will own vocabulary, queue, batch and FSRS state
 
 ## Current work
 
-The migration adds `account_vocab` separately from existing data. Parameterized SQL provides isolated read/write with revision checks and an atomic guest-to-empty-account copy. `tests/account-data.test.ts` runs against a local PGlite PostgreSQL engine, not a production database. No production migration has been run. A Neon Auth proxy and account-only state/import endpoints are implemented in the draft, but the web store and UI are not connected to them. They are not deployed or validated end to end. No account sync or mobile app is live yet.
+The migration adds `account_vocab` separately from existing data. Parameterized SQL provides isolated read/write with revision checks and an atomic guest-to-empty-account copy. `tests/account-data.test.ts` runs against a local PGlite PostgreSQL engine, not a production database. No production migration has been run. A Neon Auth proxy, account-only state/import endpoints, and the prototype-inspired web account UI are implemented in the draft. The UI calls the auth proxy, but the web vocabulary store is not connected to the account state endpoints. The UI explicitly warns that synchronization is not active. The flow is not deployed or validated end to end. No account sync or mobile app is live yet.
 
 ## Before release
 
 1. A separate Neon test branch has Managed Better Auth enabled with shared email, OTP verification required and session revocation on password reset. Configure trusted origins and a strong server-only cookie secret for each environment; provision production only after the flow is tested. Keep the free plan.
 2. Use the requested shared email provider for initial testing, with OTP verification and password reset. Neon recommends custom SMTP for production; shared delivery is limited, so clearly disclose this limitation and verify email delivery end to end. Do not add credentials to Git or screenshots.
-3. Implement provider proxy and verified session handling, email signup/login/verification/recovery, account UI adapted from the approved prototype, secure cache partitioning and explicit import flow. Update privacy disclosure.
+3. Complete and test provider integration, signup/login/verification/recovery, secure identity-scoped cache partitioning, account switch handling, and explicit guest import. Update privacy disclosure. The initial UI has only been tested with mocked provider responses.
 4. Test authenticated API isolation, CSRF, account switch across tabs, stale revisions, offline outbox, failed sync and guest migration; verify UI at mobile and desktop sizes. Use an isolated test database and test users.
 5. Only after review: run the additive migration on the intended production database, configure secrets, deploy, and verify with isolated accounts without altering real users' data.
 
