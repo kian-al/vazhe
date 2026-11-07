@@ -20,6 +20,10 @@ A single verified user identity will own vocabulary, queue, batch and FSRS state
 
 The migration adds `account_vocab` separately from existing data. Parameterized SQL provides isolated read/write with revision checks and an atomic guest-to-empty-account copy. `tests/account-data.test.ts` runs against a local PGlite PostgreSQL engine, not a production database. No production migration has been run. A Neon Auth proxy, account-only state/import endpoints, and the prototype-inspired web account UI are implemented in the draft. The UI calls the auth proxy, but the web vocabulary store is not connected to the account state endpoints. The UI explicitly warns that synchronization is not active. The flow is not deployed or validated end to end. No account sync or mobile app is live yet.
 
+## Security and UX hardening in this draft
+
+The JSON write endpoints use a bounded streaming reader, and the app sends basic framing, MIME-sniffing and referrer headers. Minimal allowlisted operational events are emitted to server logs without request bodies or credentials. These are **not** a durable or complete audit trail, and rate limiting, CSP, production role verification, real email, account-scoped caching and account sync remain incomplete. The account page shows a recoverable error if session discovery fails. See [ENGINEERING-SECURITY-AUDIT.md](ENGINEERING-SECURITY-AUDIT.md) for scope and remaining risks.
+
 ## Before release
 
 1. A separate Neon test branch has Managed Better Auth enabled with shared email, OTP verification required and session revocation on password reset. Configure trusted origins and a strong server-only cookie secret for each environment; provision production only after the flow is tested. Keep the free plan.
