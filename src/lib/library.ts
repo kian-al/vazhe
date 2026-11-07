@@ -7,6 +7,7 @@ export type LibraryBook = { id: string; title: string; fa?: string; author: stri
 export function useLibrary() {
   const [books,setBooks]=useState<LibraryBook[]>([]);
   const [status,setStatus]=useState<"loading"|"ready"|"error">("loading");
-  useEffect(() => { const ctrl=new AbortController(); fetch("/api/library",{signal:ctrl.signal}).then(r=>{ if(!r.ok) throw Error(); return r.json(); }).then(data=>{setBooks(data.books);setStatus("ready")}).catch(()=>{if(!ctrl.signal.aborted)setStatus("error")}); return ()=>ctrl.abort(); },[]);
-  return {books,status};
+  const [attempt,setAttempt]=useState(0);
+  useEffect(() => { const ctrl=new AbortController(); setStatus("loading"); fetch("/api/library",{signal:ctrl.signal}).then(r=>{ if(!r.ok) throw Error(); return r.json(); }).then(data=>{setBooks(data.books);setStatus("ready")}).catch(()=>{if(!ctrl.signal.aborted)setStatus("error")}); return ()=>ctrl.abort(); },[attempt]);
+  return {books,status,retry:()=>setAttempt(n=>n+1)};
 }

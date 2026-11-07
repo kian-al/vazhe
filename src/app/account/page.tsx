@@ -113,6 +113,6 @@ export default function AccountPage() {
     </div>
    </form>
   </>}
-  <p className="small muted account-footnote"><Icon n="lock" size={16}/> تا آماده‌شدن همگام‌سازی، داده‌های مهمان در همین مرورگر باقی می‌مانند. <Link className="link" href="/about">جزئیات ذخیره‌سازی</Link></p>
+  <p className="small muted account-footnote"><Icon n="lock" size={16}/> تا آماده‌شدن همگام‌سازی، داده‌های مهمان به همین مرورگر وابسته می‌مانند. <Link className="link" href="/about">جزئیات ذخیره‌سازی</Link></p>
  </div>;
 }

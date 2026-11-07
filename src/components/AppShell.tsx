@@ -88,8 +88,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link href="/account" className="tab" aria-current={path.startsWith("/account") ? "page" : undefined}><Icon n="user" /> حساب کاربری</Link>
           <Link href="/batch" className="tab" aria-current={path.startsWith("/batch") ? "page" : undefined}><Icon n="leaf" /> دستهٔ فعال</Link>
           <div style={{ flex: 1, minHeight: 16 }} />
-          <Link href="/extension" className="tab"><Icon n="puzzle" /> <span style={{ flex: 1 }}>پیش‌نمایش افزونه</span></Link>
-          <div className="sidebar-note"><b>هر واژه، یک قدم نزدیک‌تر.</b><p className="small muted">با ریتم خودت یاد بگیر؛ فشاری در کار نیست.</p><Link href="/about" className="link small">داده‌ها و حریم خصوصی</Link></div>
+          <div className="sidebar-note"><Link href="/about" className="link small">داده‌ها و حریم خصوصی</Link></div>
         </nav>
       )}
 
